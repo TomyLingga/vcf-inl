@@ -17,4 +17,14 @@ class Transporter extends Model
         'kode',
         'is_active'
     ];
+
+    public function drivers()
+    {
+        return $this->hasMany(Driver::class);
+    }
+
+    public function vcfs()
+    {
+        return $this->hasMany(Vcf::class);
+    }
 }
