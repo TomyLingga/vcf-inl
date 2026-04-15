@@ -18,4 +18,9 @@ class Produk extends Model
         'warna_nomor_urut',
         'is_active'
     ];
+
+    public function vcfs()
+    {
+        return $this->hasMany(Vcf::class);
+    }
 }
