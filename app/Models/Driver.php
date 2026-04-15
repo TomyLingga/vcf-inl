@@ -23,4 +23,9 @@ class Driver extends Model
     public function transporter(){
         return $this->belongsTo(Transporter::class, 'transporter_id');
     }
+
+    public function vcfs()
+    {
+        return $this->hasMany(Vcf::class);
+    }
 }
