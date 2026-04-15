@@ -46,4 +46,9 @@ class User extends Authenticatable
     {
         return $this->password_hash;
     }
+
+    public function vcfs()
+    {
+        return $this->hasMany(Vcf::class, 'created_by');
+    }
 }

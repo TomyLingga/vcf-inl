@@ -53,8 +53,58 @@ class Vcf extends Model
         return $this->belongsTo(Driver::class,'driver_id');
     }
 
-    public function user()
+    public function createdBy()
     {
         return $this->belongsTo(User::class, 'created_by');
+    }
+
+    public function kelengkapanSupir()
+    {
+        return $this->hasMany(VcfKelengkapanSupir::class);
+    }
+
+    public function muatanDibawa()
+    {
+        return $this->hasMany(VcfMuatanDibawa::class);
+    }
+
+    public function muatanDiisi()
+    {
+        return $this->hasMany(VcfMuatanDiisi::class);
+    }
+
+    public function pemeriksaanMasuk()
+    {
+        return $this->hasMany(VcfPemeriksaanMasuk::class);
+    }
+
+    public function bebanTambahanMasuk()
+    {
+        return $this->hasOne(VcfBebanTambahanMasuk::class);
+    }
+
+    public function segelMasuk()
+    {
+        return $this->hasOne(VcfSegelMasuk::class);
+    }
+
+    public function pemeriksaanKeluar()
+    {
+        return $this->hasMany(VcfPemeriksaanKeluar::class);
+    }
+
+    public function bebanTambahanKeluar()
+    {
+        return $this->hasOne(VcfBebanTambahanKeluar::class);
+    }
+
+    public function segelKeluar()
+    {
+        return $this->hasOne(VcfSegelKeluar::class);
+    }
+
+    public function vcfKeluar()
+    {
+        return $this->hasOne(VcfKeluar::class);
     }
 }
