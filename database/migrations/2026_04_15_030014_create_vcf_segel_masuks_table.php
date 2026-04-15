@@ -15,6 +15,16 @@ class CreateVcfSegelMasuksTable extends Migration
     {
         Schema::create('vcf_segel_masuks', function (Blueprint $table) {
             $table->id();
+
+            // Relasi ke tabel VCF (Transaksi Utama)
+            $table->foreignId('vcf_id')->constrained('vcfs')->cascadeOnDelete();
+
+            // jumlah_segel (int) - Sesuai gambar
+            $table->integer('jumlah_segel');
+
+            // Relasi ke tabel Petugas (FK ke tabel users)
+            $table->foreignId('petugas_id')->constrained('users')->cascadeOnDelete();
+
             $table->timestamps();
         });
     }

@@ -14,7 +14,19 @@ class CreateJenisKendaraansTable extends Migration
     public function up()
     {
         Schema::create('jenis_kendaraans', function (Blueprint $table) {
+            // id (Primary Key)
             $table->id();
+
+            // nama (string)
+            $table->string('nama');
+
+            // kode (string)
+            $table->string('kode');
+
+            // is_active (boolean)
+            $table->boolean('is_active')->default(true);
+
+            // timestamps (created_at & updated_at)
             $table->timestamps();
         });
     }

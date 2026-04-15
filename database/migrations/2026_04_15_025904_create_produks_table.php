@@ -14,7 +14,22 @@ class CreateProduksTable extends Migration
     public function up()
     {
         Schema::create('produks', function (Blueprint $table) {
+            // id (Primary Key)
             $table->id();
+
+            // nama (string)
+            $table->string('nama');
+
+            // kode (string)
+            $table->string('kode');
+
+            // warna_nomor_urut (string)
+            $table->string('warna_nomor_urut');
+
+            // is_active (boolean)
+            $table->boolean('is_active')->default(true);
+
+            // created_at & updated_at
             $table->timestamps();
         });
     }

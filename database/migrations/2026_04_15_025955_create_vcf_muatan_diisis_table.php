@@ -15,6 +15,19 @@ class CreateVcfMuatanDiisisTable extends Migration
     {
         Schema::create('vcf_muatan_diisis', function (Blueprint $table) {
             $table->id();
+
+            // Relasi ke tabel VCF (Transaksi Utama)
+            $table->foreignId('vcf_id')->constrained('vcfs')->cascadeOnDelete();
+
+            // Relasi ke tabel Item Muatan (Master Item)
+            $table->foreignId('item_muatan_id')->constrained('item_muatans')->cascadeOnDelete();
+
+            // nilai (string) - Mengikuti skema gambar
+            $table->string('nilai');
+
+            // keterangan (string) - Opsional
+            $table->string('keterangan')->nullable();
+
             $table->timestamps();
         });
     }

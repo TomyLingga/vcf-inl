@@ -15,6 +15,17 @@ class CreateVcfNomorSegelKeluarsTable extends Migration
     {
         Schema::create('vcf_nomor_segel_keluars', function (Blueprint $table) {
             $table->id();
+
+            // Relasi ke tabel induk (VCF_SEGEL_KELUAR)
+            // Menggunakan format foreignId sesuai instruksi Anda
+            $table->foreignId('segel_keluar_id')->constrained('vcf_segel_keluars')->cascadeOnDelete();
+
+            // urutan (int)
+            $table->integer('urutan');
+
+            // nomor_segel (string)
+            $table->string('nomor_segel');
+
             $table->timestamps();
         });
     }
