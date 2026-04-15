@@ -17,4 +17,9 @@ class JenisKendaraan extends Model
         'kode',
         'is_active'
     ];
+
+    public function vcfs()
+    {
+        return $this->hasMany(Vcf::class, 'jenis_kendaraan_id');
+    }
 }
