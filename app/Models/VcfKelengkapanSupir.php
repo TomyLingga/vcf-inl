@@ -22,7 +22,7 @@ class VcfKelengkapanSupir extends Model
         return $this->belongsTo(Vcf::class, 'vcf_id');
     }
 
-    public function kelengkapanSupir(){
+    public function itemKelengkapanSupir(){
         return $this->belongsTo(ItemKelengkapanSupir::class, 'item_id');
     }
 }
