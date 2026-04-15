@@ -8,4 +8,13 @@ use Illuminate\Database\Eloquent\Model;
 class Logistik extends Model
 {
     use HasFactory;
+
+    protected $primaryKey = 'id';
+    protected $table = 'logistiks';
+
+    protected $fillable = [
+        'nama',
+        'kode',
+        'is_active'
+    ];
 }

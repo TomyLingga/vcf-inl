@@ -8,4 +8,13 @@ use Illuminate\Database\Eloquent\Model;
 class Transporter extends Model
 {
     use HasFactory;
+
+    protected $primaryKey = 'id';
+    protected $table = 'transporters';
+
+    protected $fillable = [
+        'nama_transporter',
+        'kode',
+        'is_active'
+    ];
 }

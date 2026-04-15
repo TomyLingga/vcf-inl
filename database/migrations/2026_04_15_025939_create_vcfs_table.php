@@ -26,8 +26,8 @@ class CreateVcfsTable extends Migration
             $table->foreignId('transporter_id')->constrained()->cascadeOnDelete();
             $table->foreignId('driver_id')->constrained()->cascadeOnDelete();
             $table->time('jam_masuk');
-            $table->foreignId('created_by')->constrained('users')->cascadeOnDelete();
             $table->string('status')->default('masuk'); // misal: 'masuk', 'keluar', 'selesai'
+            $table->foreignId('created_by')->constrained('users')->cascadeOnDelete();
             $table->timestamps();
         });
     }

@@ -12,10 +12,15 @@ class User extends Authenticatable
 {
     use HasApiTokens, HasFactory, Notifiable;
 
+    protected $primaryKey = 'id';
+    protected $table = 'users';
+
     protected $fillable = [
-        'name',
-        'email',
-        'password',
+        'nama',
+        'username',
+        'password_hash',
+        'role',
+        'is_active'
     ];
 
     /**
@@ -24,7 +29,7 @@ class User extends Authenticatable
      * @var array<int, string>
      */
     protected $hidden = [
-        'password',
+        'password_hash',
         'remember_token',
     ];
 
@@ -36,4 +41,9 @@ class User extends Authenticatable
     protected $casts = [
         'email_verified_at' => 'datetime',
     ];
+
+    public function getAuthPassword()
+    {
+        return $this->password_hash;
+    }
 }
