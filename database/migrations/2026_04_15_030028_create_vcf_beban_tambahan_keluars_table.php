@@ -15,13 +15,8 @@ class CreateVcfBebanTambahanKeluarsTable extends Migration
     {
         Schema::create('vcf_beban_tambahan_keluars', function (Blueprint $table) {
             $table->id();
-
-            // Relasi ke tabel VCF (Transaksi Utama) sesuai format yang diminta
-            $table->foreignId('vcf_id')->constrained('vcfs')->cascadeOnDelete();
-
-            // jenis_beban (string) - Mencatat deskripsi beban tambahan saat keluar
+            $table->foreignId('vcf_id')->constrained()->cascadeOnDelete();
             $table->string('jenis_beban');
-
             $table->timestamps();
         });
     }

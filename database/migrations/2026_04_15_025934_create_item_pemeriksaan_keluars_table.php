@@ -14,31 +14,14 @@ class CreateItemPemeriksaanKeluarsTable extends Migration
     public function up()
     {
         Schema::create('item_pemeriksaan_keluars', function (Blueprint $table) {
-            // id (Primary Key)
             $table->id();
-
-            // nama_item (string)
             $table->string('nama_item');
-
-            // kode (string)
             $table->string('kode');
-
-            // tipe_jawaban (string)
             $table->string('tipe_jawaban');
-
-            // has_detail (boolean)
-            $table->boolean('has_detail')->default(false);
-
-            // keterangan_detail (string)
-            $table->string('keterangan_detail')->nullable();
-
-            // urutan (int)
+            $table->boolean('has_detail');
+            $table->string('keterangan_detail');
             $table->integer('urutan');
-
-            // is_active (boolean)
             $table->boolean('is_active')->default(true);
-
-            // created_at & updated_at
             $table->timestamps();
         });
     }

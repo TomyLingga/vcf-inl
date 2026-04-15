@@ -15,31 +15,20 @@ class CreateVcfsTable extends Migration
     {
         Schema::create('vcfs', function (Blueprint $table) {
             $table->id();
-            
-            // Kolom String & Date
             $table->string('nomor_urut');
             $table->date('tanggal');
-
-            // Foreign Keys (Relasi ke tabel-tabel master)
-            $table->foreignId('logistik_id')->constrained('logistiks')->cascadeOnDelete();
-            $table->foreignId('produk_id')->constrained('produks')->cascadeOnDelete();
-            
-            $table->string('tipe_ kegiatan');
+            $table->foreignId('logistik_id')->constrained()->cascadeOnDelete();
+            $table->foreignId('produk_id')->constrained()->cascadeOnDelete();
+            $table->string('tipe_kegiatan');
             $table->string('asal_tujuan');
-            
-            $table->foreignId('jenis_kendaraan_id')->constrained('jenis_kendaraans')->cascadeOnDelete();
+            $table->foreignId('jenis_kendaraan_id')->constrained()->cascadeOnDelete();
             $table->string('no_polisi');
-            
-            $table->foreignId('transporter_id')->constrained('transporters')->cascadeOnDelete();
-            $table->foreignId('driver_id')->constrained('drivers')->cascadeOnDelete();
-
-            // Jam Masuk & Auditor
+            $table->foreignId('transporter_id')->constrained()->cascadeOnDelete();
+            $table->foreignId('driver_id')->constrained()->cascadeOnDelete();
             $table->time('jam_masuk');
-            $table->foreignId('created_by')->constrained('users')->cascadeOnDelete(); // Asumsi relasi ke tabel users
-
-            // Status & Timestamps
-            $table->string('status');
-            $table->timestamps(); // Ini otomatis mencakup created_at sesuai gambar
+            $table->foreignId('created_by')->constrained('users')->cascadeOnDelete();
+            $table->string('status')->default('masuk'); // misal: 'masuk', 'keluar', 'selesai'
+            $table->timestamps();
         });
     }
 

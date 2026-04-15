@@ -14,19 +14,10 @@ class CreateTransportersTable extends Migration
     public function up()
     {
         Schema::create('transporters', function (Blueprint $table) {
-            // id (Primary Key)
             $table->id();
-
-            // nama_transporter (string)
             $table->string('nama_transporter');
-
-            // kode (string)
             $table->string('kode');
-
-            // is_active (boolean) - default true/1 biasanya digunakan agar data aktif otomatis
-            $table->boolean('is_active')->default(true);
-
-            // created_at & updated_at (timestamp)
+            $table->boolean('is_active');
             $table->timestamps();
         });
     }
