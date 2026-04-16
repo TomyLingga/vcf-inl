@@ -15,7 +15,6 @@ class CreateDriversTable extends Migration
     {
         Schema::create('drivers', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('transporter_id')->constrained()->cascadeOnDelete();
             $table->string('nama_supir');
             $table->string('no_sim');
             $table->string('jenis_sim');

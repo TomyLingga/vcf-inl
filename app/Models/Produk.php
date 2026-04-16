@@ -15,7 +15,6 @@ class Produk extends Model
     protected $fillable = [
         'nama_item',
         'kode',
-        'warna_nomor_urut',
         'is_active'
     ];
 
