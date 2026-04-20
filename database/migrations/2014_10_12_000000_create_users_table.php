@@ -18,9 +18,9 @@ class CreateUsersTable extends Migration
             $table->string('nama');
             $table->string('username')->unique();
             $table->string('password_hash');
-            $table->string('role');          // misal: 'admin', 'petugas', 'security'
+            $table->string('role');
             $table->boolean('is_active')->default(true);
-            $table->timestamp('created_at')->useCurrent();
+            $table->timestamps();
         });
     }
 
