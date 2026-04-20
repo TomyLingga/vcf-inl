@@ -4,45 +4,68 @@ namespace App\Http\Controllers\API\Master;
 
 use App\Http\Controllers\Controller;
 use App\Models\Produk;
+use Illuminate\Database\QueryException;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Http\Request;
 
 class ProdukController extends Controller
 {
-    public function index(Request $request)
+
+private $messageFail = 'Something went wrong';
+    private $messageMissing = 'Data not found in record';
+    private $messageAll = 'Success to Fetch All Datas';
+    private $messageSuccess = 'Success to Fetch Data';
+    private $messageCreate = 'Success to Create Data';
+    private $messageUpdate = 'Success to Update Data';
+
+
+     public function index(Request $request)
     {
-        $query = Produk::query();
+        try {
+            $data = Produk::orderBy('nama', 'asc')
+                    ->get();
 
-        if ($request->has('search')) {
-            $query->where('nama', 'like', '%' . $request->search . '%')
-                  ->orWhere('kode', 'like', '%' . $request->search . '%');
+            if ($data->isEmpty()) {
+                return response()->json(['message' => $this->messageMissing], 401);
+            }
+
+            return response()->json(['data' => $data, 'message' => $this->messageAll], 200);
+        } catch (QueryException $e) {
+            return response()->json([
+                'message' => $this->messageFail,
+                'err' => $e->getTrace()[0],
+                'errMsg' => $e->getMessage(),
+                'success' => false,
+            ], 500);
         }
-
-        if ($request->has('is_active')) {
-            $query->where('is_active', filter_var($request->is_active, FILTER_VALIDATE_BOOLEAN));
-        }
-
-        $data = $request->boolean('all')
-            ? $query->orderBy('nama')->get()
-            : $query->orderBy('nama')->paginate($request->get('per_page', 15));
-
-        return response()->json($data);
     }
 
-    public function store(Request $request)
+
+      public function store(Request $request)
     {
-        $validated = $request->validate([
-            'nama'              => 'required|string|max:100',
-            'kode'              => 'required|string|max:20|unique:produks,kode',
-            'warna_nomor_urut'  => 'nullable|string|max:50',
-            'is_active'         => 'boolean',
-        ]);
+        DB::beginTransaction();
+        try {
+            $validated = $request->validate([
+                'nama'      => 'required|string|max:100',
+                'kode'      => 'required|string|max:20|unique:produks,kode',
+                'is_active' => 'boolean',
+            ]);
 
-        $data = Produk::create($validated);
-
-        return response()->json([
-            'message' => 'Produk berhasil ditambahkan.',
-            'data'    => $data,
-        ], 201);
+            $driver = Produk::create($validated);
+            DB::commit();
+            return response()->json([
+                'message' => 'Produk berhasil ditambahkan.',
+                'data'    => $driver,
+            ], 201);
+        } catch (\Exception $e) {
+            DB::rollback();
+            return response()->json([
+                'message' => $this->messageFail,
+                'err' => $e->getTrace()[0],
+                'errMsg' => $e->getMessage(),
+                'success' => false,
+            ], 500);
+        }
     }
 
     public function show(Produk $produk)
@@ -50,24 +73,34 @@ class ProdukController extends Controller
         return response()->json($produk);
     }
 
-    public function update(Request $request, Produk $produk)
+  public function update(Request $request, Produk $produk)
     {
-        $validated = $request->validate([
-            'nama'             => 'sometimes|required|string|max:100',
-            'kode'             => 'sometimes|required|string|max:20|unique:produks,kode,' . $produk->id,
-            'warna_nomor_urut' => 'nullable|string|max:50',
-            'is_active'        => 'boolean',
-        ]);
+        DB::beginTransaction();
+        try {
+            $validated = $request->validate([
+                'nama'      => 'sometimes|required|string|max:100',
+                'kode'      => 'sometimes|required|string|max:20|unique:produks,kode,' . $produk->id,
+                'is_active' => 'boolean',
+            ]);
 
-        $produk->update($validated);
-
-        return response()->json([
-            'message' => 'Produk berhasil diperbarui.',
-            'data'    => $produk,
-        ]);
+            $produk->update($validated);
+            DB::commit();
+            return response()->json([
+                'message' => 'Produk berhasil diperbarui.',
+                'data'    => $produk,
+            ]);
+        } catch (\Exception $e) {
+            DB::rollback();
+            return response()->json([
+                'message' => $this->messageFail,
+                'err' => $e->getTrace()[0],
+                'errMsg' => $e->getMessage(),
+                'success' => false,
+            ], 500);
+        }
     }
 
-    public function destroy(Produk $produk)
+   public function destroy(produk $produk)
     {
         if ($produk->vcfs()->exists()) {
             return response()->json([

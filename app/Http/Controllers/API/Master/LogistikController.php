@@ -4,68 +4,101 @@ namespace App\Http\Controllers\API\Master;
 
 use App\Http\Controllers\Controller;
 use App\Models\Logistik;
+use Illuminate\Database\QueryException;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Http\Request;
 
 class LogistikController extends Controller
 {
-    public function index(Request $request)
+
+private $messageFail = 'Something went wrong';
+    private $messageMissing = 'Data not found in record';
+    private $messageAll = 'Success to Fetch All Datas';
+    private $messageSuccess = 'Success to Fetch Data';
+    private $messageCreate = 'Success to Create Data';
+    private $messageUpdate = 'Success to Update Data';
+
+     public function index(Request $request)
     {
-        $query = Logistik::query();
+        try {
+            $data = Logistik::orderBy('nama', 'asc')
+                    ->get();
 
-        if ($request->has('search')) {
-            $query->where('nama', 'like', '%' . $request->search . '%')
-                  ->orWhere('kode', 'like', '%' . $request->search . '%');
+            if ($data->isEmpty()) {
+                return response()->json(['message' => $this->messageMissing], 401);
+            }
+
+            return response()->json(['data' => $data, 'message' => $this->messageAll], 200);
+        } catch (QueryException $e) {
+            return response()->json([
+                'message' => $this->messageFail,
+                'err' => $e->getTrace()[0],
+                'errMsg' => $e->getMessage(),
+                'success' => false,
+            ], 500);
         }
-
-        if ($request->has('is_active')) {
-            $query->where('is_active', filter_var($request->is_active, FILTER_VALIDATE_BOOLEAN));
-        }
-
-        $data = $request->boolean('all')
-            ? $query->orderBy('nama')->get()
-            : $query->orderBy('nama')->paginate($request->get('per_page', 15));
-
-        return response()->json($data);
     }
 
-    public function store(Request $request)
+      public function store(Request $request)
     {
-        $validated = $request->validate([
-            'nama'      => 'required|string|max:100',
-            'kode'      => 'required|string|max:20|unique:logistiks,kode',
-            'is_active' => 'boolean',
-        ]);
+        DB::beginTransaction();
+        try {
+            $validated = $request->validate([
+                'nama'      => 'required|string|max:100',
+                'kode'      => 'required|string|max:20|unique:logistiks,kode',
+                'is_active' => 'boolean',
+            ]);
 
-        $data = Logistik::create($validated);
-
-        return response()->json([
-            'message' => 'Logistik berhasil ditambahkan.',
-            'data'    => $data,
-        ], 201);
+            $driver = Logistik::create($validated);
+            DB::commit();
+            return response()->json([
+                'message' => 'Logistik berhasil ditambahkan.',
+                'data'    => $driver,
+            ], 201);
+        } catch (\Exception $e) {
+            DB::rollback();
+            return response()->json([
+                'message' => $this->messageFail,
+                'err' => $e->getTrace()[0],
+                'errMsg' => $e->getMessage(),
+                'success' => false,
+            ], 500);
+        }
     }
+
 
     public function show(Logistik $logistik)
     {
         return response()->json($logistik);
     }
 
-    public function update(Request $request, Logistik $logistik)
+   public function update(Request $request, Logistik $logistik)
     {
-        $validated = $request->validate([
-            'nama'      => 'sometimes|required|string|max:100',
-            'kode'      => 'sometimes|required|string|max:20|unique:logistiks,kode,' . $logistik->id,
-            'is_active' => 'boolean',
-        ]);
+        DB::beginTransaction();
+        try {
+            $validated = $request->validate([
+                'nama'      => 'sometimes|required|string|max:100',
+                'kode'      => 'sometimes|required|string|max:20|unique:logistiks,kode,' . $logistik->id,
+                'is_active' => 'boolean',
+            ]);
 
-        $logistik->update($validated);
-
-        return response()->json([
-            'message' => 'Logistik berhasil diperbarui.',
-            'data'    => $logistik,
-        ]);
+            $logistik->update($validated);
+            DB::commit();
+            return response()->json([
+                'message' => 'Logistik berhasil diperbarui.',
+                'data'    => $logistik,
+            ]);
+        } catch (\Exception $e) {
+            DB::rollback();
+            return response()->json([
+                'message' => $this->messageFail,
+                'err' => $e->getTrace()[0],
+                'errMsg' => $e->getMessage(),
+                'success' => false,
+            ], 500);
+        }
     }
-
-    public function destroy(Logistik $logistik)
+ public function destroy(Logistik $logistik)
     {
         if ($logistik->vcfs()->exists()) {
             return response()->json([
