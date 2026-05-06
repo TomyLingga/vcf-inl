@@ -35,7 +35,7 @@ class VcfBagian4Controller extends Controller
             $keluar = VcfKeluar::create([
                 'vcf_id'                  => $vcf->id,
                 'jam_keluar'              => $validated['jam_keluar'],
-                'emergency_respon_kontak' => $validated['emergency_respon_kontak'] ?? null,
+                'emergency_respon_kontak' => $validated['emergency_respon_kontak'] ?? '',
                 'petugas_id'              => $request->user()->id,
                 'waktu_input'             => now(),
             ]);
@@ -48,7 +48,7 @@ class VcfBagian4Controller extends Controller
                 'message' => 'VCF Bagian 4 berhasil disimpan. VCF selesai.',
                 'data'    => $keluar->load('petugas:id,nama'),
             ]);
-        } catch (\Throwable $e) {
+        } catch (\Throwable $e) { if ($e instanceof \Illuminate\Validation\ValidationException) { DB::rollBack(); throw $e; }
             DB::rollBack();
             return response()->json([
                 'message' => 'Gagal menyimpan Bagian 4.',

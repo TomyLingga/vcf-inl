@@ -69,6 +69,7 @@ class VcfBagian2Controller extends Controller
                 ]);
             }
 
+
             // Simpan beban tambahan jika ada
             if ($validated['beban_tambahan_ada']) {
                 VcfBebanTambahanMasuk::create([
@@ -103,7 +104,7 @@ class VcfBagian2Controller extends Controller
                 'message' => 'VCF Bagian 2 berhasil disimpan.',
                 'data'    => $this->loadBagian2($vcf->id),
             ]);
-        } catch (\Throwable $e) {
+        } catch (\Throwable $e) { if ($e instanceof \Illuminate\Validation\ValidationException) { DB::rollBack(); throw $e; }
             DB::rollBack();
             return response()->json([
                 'message' => 'Gagal menyimpan Bagian 2.',
@@ -201,7 +202,7 @@ class VcfBagian2Controller extends Controller
                 'message' => 'VCF Bagian 2 berhasil diperbarui.',
                 'data'    => $this->loadBagian2($vcf->id),
             ]);
-        } catch (\Throwable $e) {
+        } catch (\Throwable $e) { if ($e instanceof \Illuminate\Validation\ValidationException) { DB::rollBack(); throw $e; }
             DB::rollBack();
             return response()->json([
                 'message' => 'Gagal memperbarui Bagian 2.',

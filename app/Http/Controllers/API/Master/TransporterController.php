@@ -54,7 +54,7 @@ class TransporterController extends Controller
                 'message' => 'Transporter berhasil ditambahkan.',
                 'data'    => $driver,
             ], 201);
-        } catch (\Exception $e) {
+        } catch (\Exception $e) { if ($e instanceof \Illuminate\Validation\ValidationException) { DB::rollback(); throw $e; }
             DB::rollback();
             return response()->json([
                 'message' => $this->messageFail,
@@ -86,7 +86,7 @@ class TransporterController extends Controller
                 'message' => 'Transporter berhasil diperbarui.',
                 'data'    => $transporter,
             ]);
-        } catch (\Exception $e) {
+        } catch (\Exception $e) { if ($e instanceof \Illuminate\Validation\ValidationException) { DB::rollback(); throw $e; }
             DB::rollback();
             return response()->json([
                 'message' => $this->messageFail,

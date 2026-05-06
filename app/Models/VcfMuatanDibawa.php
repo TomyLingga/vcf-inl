@@ -8,7 +8,7 @@ use Illuminate\Database\Eloquent\Model;
 class VcfMuatanDibawa extends Model
 {
     use HasFactory;
-    protected $primaryKey = 'id';
+
     protected $table = 'vcf_muatan_dibawas';
 
     protected $fillable = [
@@ -18,11 +18,13 @@ class VcfMuatanDibawa extends Model
         'keterangan'
     ];
 
-    public function vcf(){
-        return $this->belongsTo(Vcf::class, 'vcf_id');
+    public function vcf()
+    {
+        return $this->belongsTo(Vcf::class);
     }
 
-    public function ItemMuatan(){
+    public function itemMuatan()
+    {
         return $this->belongsTo(ItemMuatan::class, 'item_muatan_id');
     }
 }

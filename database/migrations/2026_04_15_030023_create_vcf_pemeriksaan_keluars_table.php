@@ -18,7 +18,7 @@ class CreateVcfPemeriksaanKeluarsTable extends Migration
             $table->foreignId('vcf_id')->constrained()->cascadeOnDelete();
             $table->foreignId('item_id')->constrained('item_pemeriksaan_keluars')->cascadeOnDelete();
             $table->string('nilai');
-            $table->string('keterangan');
+            $table->string('keterangan')->nullable();
             $table->foreignId('petugas_id')->constrained('users')->cascadeOnDelete();
             $table->timestamp('waktu_input');
             $table->timestamps();

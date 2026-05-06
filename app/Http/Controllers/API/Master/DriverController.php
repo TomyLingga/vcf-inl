@@ -43,6 +43,7 @@ class DriverController extends Controller
         DB::beginTransaction();
         try {
             $validated = $request->validate([
+                'transporter_id'  => 'required|exists:transporters,id', 
                 'nama_supir'      => 'required|string|max:255',
                 'no_sim'          => 'required|string|max:50|unique:drivers,no_sim',
                 'jenis_sim'       => 'required|string|max:10',
@@ -57,11 +58,15 @@ class DriverController extends Controller
                 'data'    => $driver,
             ], 201);
         } catch (\Exception $e) {
+            if ($e instanceof \Illuminate\Validation\ValidationException) {
+                DB::rollback();
+                throw $e;
+            }
             DB::rollback();
             return response()->json([
                 'message' => $this->messageFail,
-                'err' => $e->getTrace()[0],
-                'errMsg' => $e->getMessage(),
+                'err'     => $e->getTrace()[0],
+                'errMsg'  => $e->getMessage(),
                 'success' => false,
             ], 500);
         }
@@ -90,7 +95,7 @@ class DriverController extends Controller
                 'message' => 'Driver berhasil diperbarui.',
                 'data'    => $driver,
             ]);
-        } catch (\Exception $e) {
+        } catch (\Exception $e) { if ($e instanceof \Illuminate\Validation\ValidationException) { DB::rollback(); throw $e; }
             DB::rollback();
             return response()->json([
                 'message' => $this->messageFail,

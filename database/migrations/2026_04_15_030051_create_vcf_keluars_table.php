@@ -17,7 +17,7 @@ class CreateVcfKeluarsTable extends Migration
             $table->id();
             $table->foreignId('vcf_id')->constrained()->cascadeOnDelete();
             $table->time('jam_keluar');
-            $table->string('emergency_respon_kontak');
+            $table->string('emergency_respon_kontak')->nullable();
             $table->foreignId('petugas_id')->constrained('users')->cascadeOnDelete();
             $table->timestamp('waktu_input');
             $table->timestamps();

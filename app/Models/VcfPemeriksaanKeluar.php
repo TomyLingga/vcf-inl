@@ -8,7 +8,7 @@ use Illuminate\Database\Eloquent\Model;
 class VcfPemeriksaanKeluar extends Model
 {
     use HasFactory;
-    protected $primaryKey = 'id';
+
     protected $table = 'vcf_pemeriksaan_keluars';
 
     protected $fillable = [
@@ -18,18 +18,20 @@ class VcfPemeriksaanKeluar extends Model
         'keterangan',
         'petugas_id',
         'waktu_input'
-
     ];
 
-    public function vcf(){
-        return $this->belongsTo(Vcf::class, 'vcf_id');
+    public function vcf()
+    {
+        return $this->belongsTo(Vcf::class);
     }
 
-    public function itemPemeriksaanKeluar(){
-        return $this->belongsTo(itemPemeriksaanKeluar::class, 'item_id');
+    public function item()
+    {
+        return $this->belongsTo(ItemPemeriksaanKeluar::class, 'item_id');
     }
 
-    public function petugas(){
+    public function petugas()
+    {
         return $this->belongsTo(User::class, 'petugas_id');
     }
 }

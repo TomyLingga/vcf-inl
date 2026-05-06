@@ -8,7 +8,7 @@ use Illuminate\Database\Eloquent\Model;
 class VcfNomorSegelKeluar extends Model
 {
     use HasFactory;
-    protected $primaryKey = 'id';
+
     protected $table = 'vcf_nomor_segel_keluars';
 
     protected $fillable = [
@@ -17,8 +17,8 @@ class VcfNomorSegelKeluar extends Model
         'nomor_segel'
     ];
 
-    public function segelKeluar(){
-        return $this->belongsTo(SegelKeluar::class, 'segel_masuk_id');
+    public function segelKeluar()
+    {
+        return $this->belongsTo(VcfSegelKeluar::class, 'segel_keluar_id');
     }
-
 }

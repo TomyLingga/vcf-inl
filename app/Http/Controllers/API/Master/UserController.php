@@ -68,7 +68,7 @@ class UserController extends Controller
                 'message' => 'User berhasil ditambahkan.',
                 'data'    => $user->only('id', 'nama', 'username', 'role', 'is_active'),
             ], 201);
-        } catch (\Exception $e) {
+        } catch (\Exception $e) { if ($e instanceof \Illuminate\Validation\ValidationException) { DB::rollback(); throw $e; }
             DB::rollback();
             return response()->json([
                 'message' => "Ada kesalahan",
