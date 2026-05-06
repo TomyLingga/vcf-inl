@@ -58,7 +58,7 @@ class VcfBagian3Controller extends Controller
                     'vcf_id'      => $vcf->id,
                     'item_id'     => $item['item_id'],
                     'nilai'       => $item['nilai'],
-                    'keterangan'  => $item['keterangan'] ?? null,
+                    'keterangan'  => $item['keterangan'] ?? '',
                     'petugas_id'  => $request->user()->id,
                     'waktu_input' => now(),
                 ]);
@@ -95,7 +95,7 @@ class VcfBagian3Controller extends Controller
                 'message' => 'VCF Bagian 3 berhasil disimpan.',
                 'data'    => $this->loadBagian3($vcf->id),
             ]);
-        } catch (\Throwable $e) {
+        } catch (\Throwable $e) { if ($e instanceof \Illuminate\Validation\ValidationException) { DB::rollBack(); throw $e; }
             DB::rollBack();
             return response()->json([
                 'message' => 'Gagal menyimpan Bagian 3.',
@@ -141,7 +141,7 @@ class VcfBagian3Controller extends Controller
                         'vcf_id'      => $vcf->id,
                         'item_id'     => $item['item_id'],
                         'nilai'       => $item['nilai'],
-                        'keterangan'  => $item['keterangan'] ?? null,
+                        'keterangan'  => $item['keterangan'] ?? '',
                         'petugas_id'  => $request->user()->id,
                         'waktu_input' => now(),
                     ]);
@@ -192,7 +192,7 @@ class VcfBagian3Controller extends Controller
                 'message' => 'VCF Bagian 3 berhasil diperbarui.',
                 'data'    => $this->loadBagian3($vcf->id),
             ]);
-        } catch (\Throwable $e) {
+        } catch (\Throwable $e) { if ($e instanceof \Illuminate\Validation\ValidationException) { DB::rollBack(); throw $e; }
             DB::rollBack();
             return response()->json([
                 'message' => 'Gagal memperbarui Bagian 3.',

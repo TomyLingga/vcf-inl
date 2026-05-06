@@ -162,7 +162,7 @@ class VcfBagian1Controller extends Controller
                 'message' => 'VCF Bagian 1 berhasil disimpan.',
                 'data'    => $this->loadVcfFull($vcf->id),
             ], 201);
-        } catch (\Throwable $e) {
+        } catch (\Throwable $e) { if ($e instanceof \Illuminate\Validation\ValidationException) { DB::rollBack(); throw $e; }
             DB::rollBack();
             return response()->json([
                 'message' => 'Gagal menyimpan VCF.',
@@ -267,7 +267,7 @@ class VcfBagian1Controller extends Controller
                 'message' => 'VCF Bagian 1 berhasil diperbarui.',
                 'data'    => $this->loadVcfFull($vcf->id),
             ]);
-        } catch (\Throwable $e) {
+        } catch (\Throwable $e) { if ($e instanceof \Illuminate\Validation\ValidationException) { DB::rollBack(); throw $e; }
             DB::rollBack();
             return response()->json([
                 'message' => 'Gagal memperbarui VCF.',

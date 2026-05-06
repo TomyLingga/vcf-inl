@@ -54,7 +54,7 @@ class JenisKendaraanController extends Controller
                 'message' => 'Jenis kendaraan berhasil ditambahkan.',
                 'data'    => $driver,
             ], 201);
-        } catch (\Exception $e) {
+        } catch (\Exception $e) { if ($e instanceof \Illuminate\Validation\ValidationException) { DB::rollback(); throw $e; }
             DB::rollback();
             return response()->json([
                 'message' => $this->messageFail,
@@ -85,7 +85,7 @@ class JenisKendaraanController extends Controller
                 'message' => 'Jenis kendaraan berhasil diperbarui.',
                 'data'    => $jenisKendaraan,
             ]);
-        } catch (\Exception $e) {
+        } catch (\Exception $e) { if ($e instanceof \Illuminate\Validation\ValidationException) { DB::rollback(); throw $e; }
             DB::rollback();
             return response()->json([
                 'message' => $this->messageFail,

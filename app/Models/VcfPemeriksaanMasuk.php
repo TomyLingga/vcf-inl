@@ -8,17 +8,30 @@ use Illuminate\Database\Eloquent\Model;
 class VcfPemeriksaanMasuk extends Model
 {
     use HasFactory;
-    protected $primaryKey = 'id';
+
     protected $table = 'vcf_pemeriksaan_masuks';
 
     protected $fillable = [
-        'nama_item',
-        'kode',
-        'tipe_jawaban',
-        'has_detail',
-        'keterangan_detail',
-        'urutan',
-        'is_active'
-
+        'vcf_id',
+        'item_id',
+        'nilai',
+        'keterangan',
+        'petugas_id',
+        'waktu_input'
     ];
+
+    public function vcf()
+    {
+        return $this->belongsTo(Vcf::class);
+    }
+
+    public function item()
+    {
+        return $this->belongsTo(ItemPemeriksaanMasuk::class, 'item_id');
+    }
+
+    public function petugas()
+    {
+        return $this->belongsTo(User::class, 'petugas_id');
+    }
 }

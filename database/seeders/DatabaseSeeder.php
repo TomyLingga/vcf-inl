@@ -13,6 +13,24 @@ class DatabaseSeeder extends Seeder
      */
     public function run()
     {
-        // \App\Models\User::factory(10)->create();
+        \App\Models\User::firstOrCreate(
+            ['username' => 'admin'],
+            [
+                'nama' => 'Administrator',
+                'password_hash' => \Illuminate\Support\Facades\Hash::make('password'),
+                'role' => 'admin',
+                'is_active' => true,
+            ]
+        );
+
+        \App\Models\User::firstOrCreate(
+            ['username' => 'petugas'],
+            [
+                'nama' => 'Petugas Security',
+                'password_hash' => \Illuminate\Support\Facades\Hash::make('password'),
+                'role' => 'petugas',
+                'is_active' => true,
+            ]
+        );
     }
 }

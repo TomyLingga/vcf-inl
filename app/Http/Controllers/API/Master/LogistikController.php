@@ -55,7 +55,7 @@ private $messageFail = 'Something went wrong';
                 'message' => 'Logistik berhasil ditambahkan.',
                 'data'    => $driver,
             ], 201);
-        } catch (\Exception $e) {
+        } catch (\Exception $e) { if ($e instanceof \Illuminate\Validation\ValidationException) { DB::rollback(); throw $e; }
             DB::rollback();
             return response()->json([
                 'message' => $this->messageFail,
@@ -88,7 +88,7 @@ private $messageFail = 'Something went wrong';
                 'message' => 'Logistik berhasil diperbarui.',
                 'data'    => $logistik,
             ]);
-        } catch (\Exception $e) {
+        } catch (\Exception $e) { if ($e instanceof \Illuminate\Validation\ValidationException) { DB::rollback(); throw $e; }
             DB::rollback();
             return response()->json([
                 'message' => $this->messageFail,

@@ -10,7 +10,7 @@ class Vcf extends Model
     use HasFactory;
 
     protected $primaryKey = 'id';
-    protected $table = 'item_pemeriksaan_keluars';
+    protected $table = 'vcfs';
 
     protected $fillable = [
         'nomor_urut',

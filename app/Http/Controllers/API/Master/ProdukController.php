@@ -46,9 +46,10 @@ private $messageFail = 'Something went wrong';
         DB::beginTransaction();
         try {
             $validated = $request->validate([
-                'nama'      => 'required|string|max:100',
-                'kode'      => 'required|string|max:20|unique:produks,kode',
-                'is_active' => 'boolean',
+                'nama'                   => 'required|string|max:100',
+                'kode'                   => 'required|string|max:20|unique:produks,kode',
+                'warna_nomor_urut'       => 'required|string|max:20',
+                'is_active'              => 'boolean',
             ]);
 
             $driver = Produk::create($validated);
@@ -57,7 +58,7 @@ private $messageFail = 'Something went wrong';
                 'message' => 'Produk berhasil ditambahkan.',
                 'data'    => $driver,
             ], 201);
-        } catch (\Exception $e) {
+        } catch (\Exception $e) { if ($e instanceof \Illuminate\Validation\ValidationException) { DB::rollback(); throw $e; }
             DB::rollback();
             return response()->json([
                 'message' => $this->messageFail,
@@ -89,7 +90,7 @@ private $messageFail = 'Something went wrong';
                 'message' => 'Produk berhasil diperbarui.',
                 'data'    => $produk,
             ]);
-        } catch (\Exception $e) {
+        } catch (\Exception $e) { if ($e instanceof \Illuminate\Validation\ValidationException) { DB::rollback(); throw $e; }
             DB::rollback();
             return response()->json([
                 'message' => $this->messageFail,
