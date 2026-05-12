@@ -86,7 +86,9 @@ export default function SettingsPage() {
   const [colorInfo, setColorInfo] = useState("");
 
   useEffect(() => {
-    if (!isAdmin()) router.push("/dashboard");
+    if (!isAdmin()) {
+      router.replace("/vcf");
+    }
   }, [router]);
 
   useEffect(() => {

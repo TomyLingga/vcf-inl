@@ -2,14 +2,19 @@
 
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { isAuthenticated } from "@/lib/auth";
+import { isAuthenticated, getUser } from "@/lib/auth";
 
 export default function HomePage() {
   const router = useRouter();
 
   useEffect(() => {
     if (isAuthenticated()) {
-      router.replace("/dashboard");
+      const user = getUser();
+      if (user?.role === "admin") {
+        router.replace("/dashboard");
+      } else {
+        router.replace("/vcf");
+      }
     } else {
       router.replace("/login");
     }
