@@ -7,6 +7,9 @@ export const metadata: Metadata = {
     "Vehicle Control Form (VCF) Digital System — PT. Industri Nabati Lestari, Pabrik Minyak Goreng. No. Dokumen FM-BSHS-42/01",
   keywords: ["VCF", "vehicle control form", "INL", "industri nabati lestari", "keamanan pabrik"],
   authors: [{ name: "PT. Industri Nabati Lestari" }],
+  icons: {
+    icon: "/logo.png",
+  },
 };
 
 import { ThemeProvider } from "@/components/ThemeProvider";
