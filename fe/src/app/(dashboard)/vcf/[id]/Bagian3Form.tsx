@@ -1,0 +1,501 @@
+"use client";
+
+import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
+import { vcfApi, masterApi } from "@/lib/api";
+
+interface CheckItem {
+  id: number;
+  nama_item: string;
+  tipe_jawaban: string;
+  pilihan_jawaban?: string;
+  kode?: string;
+}
+interface Props { vcfId: number; canEdit: boolean; vcfData: any; onSuccess: () => void; }
+
+export default function Bagian3Form({ vcfId, canEdit, vcfData, onSuccess }: Props) {
+  const router = useRouter();
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+  const [fieldErrors, setFieldErrors] = useState<Record<number, boolean>>({});
+  const [pemeriksaanItems, setPemeriksaanItems] = useState<CheckItem[]>([]);
+  const [pemeriksaan, setPemeriksaan] = useState<Record<number, string>>({});
+  
+  // States for detail fields
+  const [jenisBeban, setJenisBeban] = useState("");
+  const [jumlahSegel, setJumlahSegel] = useState("");
+  const [nomorSegel, setNomorSegel] = useState<string[]>([""]);
+  const [keteranganUmum, setKeteranganUmum] = useState("");
+  const [isEditing, setIsEditing] = useState(false);
+
+  // Reject Modal State
+  const [showRejectModal, setShowRejectModal] = useState(false);
+  const [rejectReason, setRejectReason] = useState("");
+
+  useEffect(() => {
+    masterApi.getItemPemeriksaanKeluar().then((res) => {
+      const items = (res.data.data || res.data).filter(
+        (i: CheckItem & { is_active?: boolean }) => i.is_active !== false
+      );
+      setPemeriksaanItems(items);
+      const initial: Record<number, string> = {};
+      items.forEach((i: CheckItem) => { initial[i.id] = ""; });
+      setPemeriksaan(initial);
+    }).catch(console.error);
+  }, []);
+
+  const handleEdit = () => {
+    if (vcfData.pemeriksaan_keluar) {
+      const initial: Record<number, string> = {};
+      vcfData.pemeriksaan_keluar.forEach((pk: any) => {
+        initial[pk.item_id] = pk.nilai;
+      });
+      setPemeriksaan(initial);
+    }
+    
+    if (vcfData.beban_tambahan_keluar) {
+      setJenisBeban(vcfData.beban_tambahan_keluar.jenis_beban || "");
+    }
+    
+    if (vcfData.segel_keluar) {
+      setJumlahSegel(String(vcfData.segel_keluar.jumlah_segel || ""));
+      setNomorSegel(vcfData.segel_keluar.nomor_segel?.map((s: any) => s.nomor_segel) || [""]);
+    }
+    
+    setKeteranganUmum(vcfData.vcf_bagian3?.keterangan || vcfData.catatan || "");
+    setIsEditing(true);
+  };
+
+  const validateForm = (): { valid: boolean; message?: string } => {
+    const errors: Record<number, boolean> = {};
+    let hasError = false;
+
+    // Validasi setiap item pemeriksaan harus diisi
+    pemeriksaanItems.forEach((item) => {
+      const value = pemeriksaan[item.id];
+      if (!value || value.trim() === "" || value === "—") {
+        errors[item.id] = true;
+        hasError = true;
+      }
+    });
+
+    const btkItem = pemeriksaanItems.find(i => i.kode === "BTK");
+    const sgkItem = pemeriksaanItems.find(i => i.kode === "SGK");
+
+    // Validasi beban tambahan - jika "Ada" harus isi jenis beban
+    if (btkItem && pemeriksaan[btkItem.id] === "Ada" && !jenisBeban.trim()) {
+      errors[btkItem.id] = true;
+      hasError = true;
+      setFieldErrors(errors);
+      return { valid: false, message: "Jenis beban tambahan wajib diisi jika memilih 'Ada'." };
+    }
+
+    // Validasi segel - jika "Terpasang" harus isi nomor segel
+    if (sgkItem && pemeriksaan[sgkItem.id] === "Terpasang") {
+      const validSegel = nomorSegel.filter(s => s.trim()).length > 0;
+      if (!validSegel) {
+        errors[sgkItem.id] = true;
+        hasError = true;
+        setFieldErrors(errors);
+        return { valid: false, message: "Nomor segel wajib diisi jika memilih 'Terpasang'." };
+      }
+    }
+
+    setFieldErrors(errors);
+    return { valid: !hasError, message: hasError ? "Harap lengkapi semua pemeriksaan yang belum diisi." : undefined };
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError("");
+    
+    // Validasi client-side sebelum submit
+    const validation = validateForm();
+    if (!validation.valid) {
+      setError(validation.message || "Harap lengkapi semua pemeriksaan yang belum diisi.");
+      const firstErrorEl = document.querySelector('[data-error="true"]');
+      firstErrorEl?.scrollIntoView({ behavior: "smooth", block: "center" });
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const pemItems = pemeriksaanItems.map((item) => ({
+        item_id: item.id, nilai: pemeriksaan[item.id], keterangan: null,
+      }));
+
+      const btkItem = pemeriksaanItems.find(i => i.kode === "BTK");
+      const sgkItem = pemeriksaanItems.find(i => i.kode === "SGK");
+
+      const payload = {
+        pemeriksaan: pemItems,
+        beban_tambahan_ada: btkItem ? pemeriksaan[btkItem.id] === "Ada" : false,
+        jenis_beban: jenisBeban || null,
+        segel_terpasang: sgkItem ? pemeriksaan[sgkItem.id] === "Terpasang" : false,
+        jumlah_segel: (sgkItem && pemeriksaan[sgkItem.id] === "Terpasang") ? (jumlahSegel ? parseInt(jumlahSegel) : nomorSegel.length) : null,
+        nomor_segel: (sgkItem && pemeriksaan[sgkItem.id] === "Terpasang") ? nomorSegel.filter(Boolean) : [],
+        keterangan: keteranganUmum || null,
+      };
+
+      if (isEditing) {
+        await vcfApi.updateBagian3(vcfId, payload);
+        setIsEditing(false);
+      } else {
+        await vcfApi.createBagian3(vcfId, payload);
+      }
+      
+      router.push("/vcf");
+      onSuccess();
+    } catch (err: unknown) {
+      const axiosError = err as { response?: { data?: { message?: string } } };
+      setError(axiosError.response?.data?.message || "Gagal menyimpan Bagian 3.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleReject = async () => {
+    if (!rejectReason.trim()) return;
+    setError("");
+    setLoading(true);
+    try {
+      await vcfApi.rejectBagian3(vcfId, { catatan_reject: rejectReason });
+      setShowRejectModal(false);
+      router.push("/vcf");
+      onSuccess(); 
+    } catch (err: unknown) {
+      const axiosError = err as { response?: { data?: { message?: string } } };
+      setError(axiosError.response?.data?.message || "Gagal reject VCF.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (!canEdit && !isEditing) {
+    return (
+      <div className="space-y-6">
+        {vcfData.status === "reject" && (
+          <div className="p-5 rounded-2xl border-2 animate-pulse" style={{ background: "rgba(239,68,68,0.05)", borderColor: "rgba(239,68,68,0.2)" }}>
+            <div className="flex items-center gap-3 mb-2 text-red-400 font-bold">
+              VCF Ditolak di Tahap Ini
+            </div>
+            <p className="text-sm pl-11" style={{ color: "#fca5a5" }}>
+              Alasan: {vcfData.catatan || "Tidak ada alasan penolakan yang dicatat."}
+            </p>
+          </div>
+        )}
+
+        <div className="glass-card overflow-hidden">
+          <div className="px-6 py-4 border-b border-border bg-slate-50/50 dark:bg-white/5 flex justify-between items-center">
+            <h3 className="font-bold text-text-primary dark:text-white uppercase tracking-wider text-sm">Hasil Pemeriksaan Weighbridge Keluar</h3>
+            {vcfData.status !== 'selesai' && (
+              <button 
+                onClick={handleEdit}
+                className="btn btn-sm btn-secondary flex items-center gap-2"
+              >
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                EDIT
+              </button>
+            )}
+          </div>
+          
+          <div className="p-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {vcfData.pemeriksaan_keluar?.map((pk: any) => (
+                <div key={pk.id} className="flex items-center justify-between p-4 rounded-xl bg-slate-50 dark:bg-white/5 border border-slate-100 dark:border-white/5">
+                  <div>
+                    <p className="text-[10px] uppercase font-bold text-text-muted tracking-widest mb-1">{pk.item?.nama_item}</p>
+                    <p className="font-bold text-text-primary dark:text-slate-200">{pk.nilai}</p>
+                  </div>
+                  {(pk.nilai === 'Rusak' || pk.nilai === 'Tidak' || pk.nilai === 'Tidak Ada' || pk.nilai === 'Sisa') ? (
+                    <div className="text-[10px] font-black text-red-500 bg-red-500/10 px-2 py-1 rounded uppercase">{pk.nilai}</div>
+                  ) : (
+                    <div className="text-[10px] font-black text-emerald-500 bg-emerald-500/10 px-2 py-1 rounded uppercase">{pk.nilai}</div>
+                  )}
+                </div>
+              ))}
+            </div>
+
+            {(vcfData.beban_tambahan_keluar || vcfData.segel_keluar) && (
+              <div className="mt-6 pt-6 border-t border-border grid grid-cols-1 md:grid-cols-2 gap-6">
+                {vcfData.beban_tambahan_keluar && (
+                  <div className="p-4 rounded-xl bg-blue-500/5 border border-blue-500/10">
+                    <p className="form-label text-blue-400">Beban Tambahan</p>
+                    <p className="text-sm font-bold text-blue-100">{vcfData.beban_tambahan_keluar.jenis_beban}</p>
+                  </div>
+                )}
+                {vcfData.segel_keluar && (
+                  <div className="p-4 rounded-xl bg-emerald-500/5 border border-emerald-500/10">
+                    <p className="form-label text-emerald-400">Segel ({vcfData.segel_keluar.jumlah_segel} Unit)</p>
+                    <div className="flex flex-wrap gap-2 mt-2">
+                      {vcfData.segel_keluar.nomor_segel?.map((s: any, i: number) => (
+                        <span key={i} className="px-2 py-1 bg-emerald-500/10 rounded text-[10px] font-mono text-emerald-300">
+                          {s.nomor_segel}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="max-w-4xl mx-auto space-y-6">
+      <div className="flex items-center justify-between border-b border-border pb-4">
+        <div>
+          <h2 className="text-2xl font-black text-black dark:text-white tracking-tight">{isEditing ? "Edit Security Weighbridge (Keluar)" : "Security Weighbridge (Keluar)"}</h2>
+          <p className="text-text-muted text-sm">{isEditing ? "Perbarui hasil validasi fisik kendaraan." : "Validasi fisik kendaraan saat keluar dari jembatan timbang."}</p>
+        </div>
+      </div>
+
+      {error && (
+        <div className="p-4 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 text-sm flex items-center gap-3">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+          </svg>
+          {error}
+        </div>
+      )}
+
+      <form onSubmit={handleSubmit} className="space-y-6">
+        <div className="grid grid-cols-1 gap-4">
+          {pemeriksaanItems.map((item) => {
+            const options = item.tipe_jawaban && item.tipe_jawaban.includes(',') ? item.tipe_jawaban.split(',') : null;
+            const isSelect = Array.isArray(options) && options.length > 0;
+            const value = pemeriksaan[item.id];
+
+            const hasError = fieldErrors[item.id];
+
+            return (
+              <div key={item.id} className="group transition-all duration-300" data-error={hasError ? "true" : undefined}>
+                <div className={`p-5 rounded-2xl border-2 transition-all duration-300 ${hasError 
+                  ? 'bg-red-50/50 dark:bg-red-500/5 border-red-500 shadow-lg shadow-red-500/10 animate-pulse' 
+                  : value 
+                    ? 'bg-white dark:bg-white/5 border-blue-500/50 shadow-lg shadow-blue-500/5' 
+                    : 'bg-slate-50/50 dark:bg-white/[0.02] border-slate-100 dark:border-white/5 hover:border-slate-200'
+                }`}>
+                  <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                    <div className="flex items-center gap-4">
+                      <span className="font-bold text-text-primary dark:text-slate-200">{item.nama_item}</span>
+                    </div>
+
+                    {isSelect ? (
+                      <div className="flex flex-wrap gap-2">
+                        {options.map((opt: string) => {
+                          const isSelected = value === opt;
+                          const isWarning = opt === "Rusak" || opt === "Tidak Terpasang" || opt === "Tidak Ada" || opt === "Sisa";
+                          return (
+                            <label
+                              key={opt}
+                              className={`
+                                cursor-pointer px-4 py-2 rounded-xl text-xs font-bold transition-all duration-200 border-2
+                                ${isSelected 
+                                  ? (isWarning ? 'bg-red-500 border-red-500 text-white shadow-md shadow-red-500/20' : 'bg-blue-500 border-blue-500 text-white shadow-md shadow-blue-500/20')
+                                  : 'bg-white dark:bg-white/5 border-slate-200 dark:border-white/10 text-slate-500 hover:border-slate-300 dark:hover:border-white/20'
+                                }
+                              `}
+                            >
+                              <input
+                                type="radio"
+                                className="hidden"
+                                name={`pem-k-${item.id}`}
+                                checked={isSelected}
+                                onChange={() => setPemeriksaan((p) => ({ ...p, [item.id]: opt }))}
+                              />
+                              {opt}
+                            </label>
+                          );
+                        })}
+                      </div>
+                    ) : (
+                      <input
+                        type="text"
+                        className="form-input md:max-w-[240px] bg-white dark:bg-white/5"
+                        placeholder="Masukan hasil..."
+                        value={value || ""}
+                        onChange={(e) => setPemeriksaan((prev) => ({ ...prev, [item.id]: e.target.value }))}
+                      />
+                    )}
+                  </div>
+
+                  {item.kode === "BTK" && value === "Ada" && (
+                    <div className="mt-4 pt-4 border-t border-blue-500/10">
+                      <label className="form-label text-blue-400">Sebutkan Jenis Beban (Keluar)</label>
+                      <input
+                        type="text"
+                        className="form-input bg-blue-500/5 border-blue-500/20 focus:border-blue-500"
+                        placeholder="..."
+                        value={jenisBeban}
+                        onChange={(e) => setJenisBeban(e.target.value)}
+                      />
+                    </div>
+                  )}
+
+                  {item.kode === "SGK" && value === "Terpasang" && (
+                    <div className="mt-4 pt-4 border-t border-emerald-500/10 space-y-4">
+                      <div className="flex items-center justify-between">
+                        <label className="form-label text-emerald-400">Nomor Segel (Keluar)</label>
+                        <div className="flex items-center gap-2">
+                          <input
+                            type="number"
+                            className="w-16 px-2 py-1 bg-emerald-500/10 border border-emerald-500/20 rounded-lg text-xs font-bold text-emerald-400 text-center"
+                            value={jumlahSegel || String(nomorSegel.length)}
+                            onChange={(e) => {
+                              const val = parseInt(e.target.value) || nomorSegel.length;
+                              const newCount = Math.max(1, val);
+                              setJumlahSegel(String(newCount));
+                              // Sync nomor segel array with new count
+                              if (newCount > nomorSegel.length) {
+                                setNomorSegel(prev => [...prev, ...Array(newCount - prev.length).fill("")]);
+                              } else if (newCount < nomorSegel.length) {
+                                setNomorSegel(prev => prev.slice(0, newCount));
+                              }
+                            }}
+                            min={1}
+                          />
+                          <button
+                            type="button"
+                            className="p-1 rounded hover:bg-emerald-500/20 text-emerald-500"
+                            onClick={() => setNomorSegel(p => p.length > 1 ? p.slice(0, -1) : p)}
+                            disabled={nomorSegel.length <= 1}
+                          >
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                              <line x1="5" y1="12" x2="19" y2="12" />
+                            </svg>
+                          </button>
+                          <button
+                            type="button"
+                            className="p-1 rounded hover:bg-emerald-500/20 text-emerald-500"
+                            onClick={() => setNomorSegel(p => [...p, ""])}
+                          >
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                              <line x1="12" y1="5" x2="12" y2="19" />
+                              <line x1="5" y1="12" x2="19" y2="12" />
+                            </svg>
+                          </button>
+                        </div>
+                      </div>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        {nomorSegel.map((s, idx) => (
+                          <div key={idx} className="relative">
+                            <input
+                              type="text"
+                              className="form-input form-input-sm bg-emerald-500/5 border-emerald-500/10 focus:border-emerald-500 pr-8"
+                              placeholder={`Segel Keluar #${idx + 1}`}
+                              value={s}
+                              onChange={(e) => setNomorSegel((prev) => { const n = [...prev]; n[idx] = e.target.value; return n; })}
+                            />
+                            {nomorSegel.length > 1 && (
+                              <button
+                                type="button"
+                                className="absolute right-2 top-1/2 -translate-y-1/2 text-red-400 hover:text-red-500"
+                                onClick={() => {
+                                  setNomorSegel(prev => prev.filter((_, i) => i !== idx));
+                                  setJumlahSegel(String(Math.max(1, nomorSegel.length - 1)));
+                                }}
+                              >
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                  <line x1="18" y1="6" x2="6" y2="18" />
+                                  <line x1="6" y1="6" x2="18" y2="18" />
+                                </svg>
+                              </button>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+
+        <div className="p-6 rounded-2xl bg-slate-50 dark:bg-white/5 border border-slate-100 dark:border-white/5">
+          <label className="form-label">Keterangan Tambahan <span className="text-text-muted font-normal">(Opsional)</span></label>
+          <textarea
+            className="form-input bg-white dark:bg-white/5 min-h-[100px]"
+            value={keteranganUmum}
+            onChange={(e) => setKeteranganUmum(e.target.value)}
+          />
+        </div>
+
+        <div className="flex gap-4">
+          {!isEditing && (
+            <button
+              type="button"
+              className="px-8 py-4 rounded-2xl font-bold text-sm bg-red-500/10 text-red-500 border-2 border-red-500/20 hover:bg-red-500 hover:text-white transition-all"
+              onClick={() => setShowRejectModal(true)}
+              disabled={loading}
+            >
+              REJECT
+            </button>
+          )}
+          {isEditing ? (
+            <button
+              type="button"
+              className="px-8 py-4 rounded-2xl font-bold text-sm bg-slate-200 dark:bg-white/10 text-slate-600 dark:text-slate-300 border-2 border-transparent hover:bg-slate-300 dark:hover:bg-white/20 transition-all duration-300"
+              onClick={() => { setIsEditing(false); setError(""); }}
+              disabled={loading}
+            >
+              BATAL
+            </button>
+          ) : (
+            <button
+              type="button"
+              className="px-8 py-4 rounded-2xl font-bold text-sm bg-slate-200 dark:bg-white/10 text-slate-600 dark:text-slate-300 border-2 border-transparent hover:bg-slate-300 dark:hover:bg-white/20 transition-all duration-300"
+              onClick={() => {
+                const resetObj: Record<number, string> = {};
+                pemeriksaanItems.forEach(i => { resetObj[i.id] = ""; });
+                setPemeriksaan(resetObj);
+                setJenisBeban("");
+                setJumlahSegel("");
+                setNomorSegel([""]);
+                setKeteranganUmum("");
+                setError("");
+              }}
+              disabled={loading}
+            >
+              RESET
+            </button>
+          )}
+          <button
+            type="submit"
+            className="flex-1 py-4 rounded-2xl font-bold text-sm bg-blue-600 text-white shadow-xl shadow-blue-600/20 hover:bg-blue-500 transition-all flex items-center justify-center gap-3"
+            disabled={loading}
+          >
+            {loading ? "MEMPROSES..." : (isEditing ? "SIMPAN PERUBAHAN" : "SIMPAN & LANJUTKAN")}
+          </button>
+        </div>
+      </form>
+
+      {showRejectModal && (
+        <div className="modal-overlay" onClick={() => setShowRejectModal(false)}>
+          <div className="modal-content max-w-md p-0 overflow-hidden border-none shadow-2xl" onClick={(e) => e.stopPropagation()}>
+            <div className="bg-red-500 p-8 text-white">
+              <h2 className="text-2xl font-black tracking-tight">Konfirmasi Penolakan</h2>
+              <p className="text-red-100 text-sm mt-1">Berikan alasan penolakan di Weighbridge Keluar.</p>
+            </div>
+            <div className="p-8 space-y-6">
+              <textarea
+                className="form-input w-full min-h-[120px] bg-slate-50 dark:bg-white/5 border-slate-200"
+                placeholder="Alasan penolakan..."
+                value={rejectReason}
+                onChange={(e) => setRejectReason(e.target.value)}
+              />
+              <div className="flex gap-3">
+                <button className="flex-1 py-3 rounded-xl font-bold text-slate-500" onClick={() => setShowRejectModal(false)}>BATAL</button>
+                <button className="flex-[2] py-3 rounded-xl font-bold bg-red-500 text-white" onClick={handleReject} disabled={loading || !rejectReason.trim()}>TOLAK VCF</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
