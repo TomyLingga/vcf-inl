@@ -51,7 +51,7 @@ interface VcfDetail {
   tipe_kendaraan?: string;
   tahun_kendaraan?: number;
   transporter?: { nama_transporter: string };
-  driver?: { nama_supir: string; no_sim: string; jenis_sim?: string };
+  driver?: { nama_supir: string; no_sim: string; jenis_sim?: string; tgl_berlaku_sim?: string };
   kelengkapan_supir?: { id: number; item_id: number; nilai: any; keterangan?: string; item: { nama_item: string } }[];
   pemeriksaan_masuk?: { id: number; item_id: number; nilai: string; keterangan?: string; item: { nama_item: string }; petugas?: { nama: string }; waktu_input?: string; created_at?: string }[];
   pemeriksaan_keluar?: { id: number; item_id: number; nilai: string; keterangan?: string; item: { nama_item: string }; petugas?: { nama: string }; waktu_input?: string; created_at?: string }[];
@@ -502,7 +502,11 @@ export default function VcfDetailPage() {
             <InfoField label="Jenis Kendaraan" value={vcf.tipe_kendaraan?.replace(/_/g, " ").toUpperCase() || vcf.jenis_kendaraan?.nama || "—"} />
             <InfoField label="Transporter" value={vcf.transporter?.nama_transporter || "—"} />
             <InfoField label="Nama Supir" value={vcf.driver?.nama_supir || "—"} />
-            <InfoField label="SIM Supir" value={vcf.driver?.no_sim || "—"} mono />
+            <InfoField 
+              label="SIM Supir" 
+              value={`${vcf.driver?.no_sim || "—"} (${vcf.driver?.jenis_sim || ""}) ${vcf.driver?.tgl_berlaku_sim ? "— s/d " + vcf.driver.tgl_berlaku_sim.split('T')[0] : ""}`} 
+              mono 
+            />
           </div>
 
           {/* Kelengkapan Supir */}

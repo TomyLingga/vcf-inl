@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from "react";
 import { masterApi } from "@/lib/api";
 import { clearMasterDataCache } from "@/lib/masterDataCache";
 import { exportToExcel } from "@/lib/exportUtils";
+import { formatDate } from "@/lib/utils";
 import * as XLSX from 'xlsx';
 import PrintMasterTable from "@/components/print/PrintMasterTable";
 import { downloadImportTemplate, parseAndImportExcel } from "@/lib/importTemplate";
@@ -98,7 +99,7 @@ export default function DriversPage() {
       nama_supir: item.nama_supir,
       no_sim: item.no_sim,
       jenis_sim: item.jenis_sim,
-      tgl_berlaku_sim: item.tgl_berlaku_sim,
+      tgl_berlaku_sim: item.tgl_berlaku_sim ? item.tgl_berlaku_sim.split('T')[0] : "",
       is_active: item.is_active,
     });
     setError("");
@@ -221,7 +222,7 @@ export default function DriversPage() {
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="m6 9 6 6 6-6"/></svg>
             </button>
             <div className="absolute right-0 mt-1 w-44 border border-border rounded-xl shadow-xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-50" style={{ background: "var(--bg-secondary)" }}>
-              <button onClick={() => exportToExcel("Data_Supir", ["Nama Supir","No SIM","Jenis SIM","Berlaku SIM","Status"], data.map(d => [d.nama_supir, d.no_sim, d.jenis_sim, d.tgl_berlaku_sim, d.is_active ? 'Aktif' : 'Nonaktif']))} className="w-full text-left px-4 py-2 text-sm hover:bg-bg-card-hover first:rounded-t-xl" style={{ color: "var(--text-primary)" }}>Excel (.xlsx)</button>
+              <button onClick={() => exportToExcel("Data_Supir", ["Nama Supir","No SIM","Jenis SIM","Berlaku SIM","Status"], data.map(d => [d.nama_supir, d.no_sim, d.jenis_sim, d.tgl_berlaku_sim ? d.tgl_berlaku_sim.split('T')[0] : "-", d.is_active ? 'Aktif' : 'Nonaktif']))} className="w-full text-left px-4 py-2 text-sm hover:bg-bg-card-hover first:rounded-t-xl" style={{ color: "var(--text-primary)" }}>Excel (.xlsx)</button>
               <button onClick={() => setIsPrinting(true)} className="w-full text-left px-4 py-2 text-sm hover:bg-bg-card-hover last:rounded-b-xl" style={{ color: "var(--text-primary)" }}>Cetak / PDF</button>
             </div>
           </div>
@@ -303,7 +304,7 @@ export default function DriversPage() {
                     <td className="px-6 py-4 font-medium text-text-primary dark:text-white">{item.nama_supir}</td>
                     <td className="px-6 py-4 font-mono text-xs text-secondary">{item.no_sim}</td>
                     <td className="px-6 py-4 text-sm text-secondary">{item.jenis_sim}</td>
-                    <td className="px-6 py-4 text-xs text-secondary">{item.tgl_berlaku_sim}</td>
+                    <td className="px-6 py-4 text-xs text-secondary">{item.tgl_berlaku_sim ? item.tgl_berlaku_sim.split('T')[0] : "-"}</td>
                     <td className="px-6 py-4 text-center">
                       <button
                         onClick={() => handleToggleActive(item)}
@@ -463,7 +464,7 @@ export default function DriversPage() {
           title="Master Data — Supir"
           subtitle="Daftar data supir dan SIM terdaftar"
           headers={["Nama Supir", "No. SIM", "Jenis SIM", "Berlaku s/d", "Status"]}
-          data={data.map(d => [d.nama_supir, d.no_sim, d.jenis_sim, d.tgl_berlaku_sim, d.is_active ? "Aktif" : "Nonaktif"])}
+          data={data.map(d => [d.nama_supir, d.no_sim, d.jenis_sim, d.tgl_berlaku_sim ? d.tgl_berlaku_sim.split('T')[0] : "-", d.is_active ? "Aktif" : "Nonaktif"])}
           onClose={() => setIsPrinting(false)}
         />
       )}

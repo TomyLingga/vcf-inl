@@ -13,14 +13,16 @@ interface SelectOption {
   nama_item?: string;
   kode?: string;
   no_sim?: string;
-  is_active?: boolean;
+  tgl_berlaku_sim?: string;
+  jenis_sim?: string;
+  is_active?: boolean | number | string;
 }
 
 interface ChecklistItem {
   id: number;
   nama_item: string;
   urutan: number;
-  is_active?: boolean;
+  is_active?: boolean | number | string;
 }
 
 interface MuatanItem {
@@ -28,7 +30,7 @@ interface MuatanItem {
   nama_item: string;
   jenis: "both" | "dibawa" | "diisi";
   urutan: number;
-  is_active?: boolean;
+  is_active?: boolean | number | string;
 }
 
 type TipeKegiatan = "loading_lokal" | "loading_export" | "unloading_lokal" | "unloading_import" | "";
@@ -395,6 +397,19 @@ export default function VcfEditBagian1Page() {
               <div>
                 <label className="form-label">No. SIM</label>
                 <input type="text" className="form-input bg-slate-50 dark:bg-white/5" value={allDrivers.find((d) => String(d.id) === driverId)?.no_sim || ""} readOnly />
+              </div>
+              <div>
+                <label className="form-label">Berlaku SIM</label>
+                <input 
+                  type="text" 
+                  className="form-input bg-slate-50 dark:bg-white/5" 
+                  value={(() => {
+                    const d = allDrivers.find(d => String(d.id) === driverId);
+                    return d?.tgl_berlaku_sim ? d.tgl_berlaku_sim.split('T')[0] : "";
+                  })()} 
+                  readOnly 
+                  placeholder="Terisi otomatis" 
+                />
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>

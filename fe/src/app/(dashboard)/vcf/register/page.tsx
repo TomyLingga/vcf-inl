@@ -8,9 +8,9 @@ import { formatTime, formatDate, isValidTime24h } from "@/lib/utils";
 import { getUser } from "@/lib/auth";
 import { generateQRSignature } from "@/lib/qrUtils";
 
-interface SelectOption { id: number; nama?: string; nama_transporter?: string; nama_supir?: string; nama_item?: string; kode?: string; no_sim?: string; }
-interface ChecklistItem { id: number; nama_item: string; urutan: number; }
-interface MuatanItem { id: number; nama_item: string; jenis: "both" | "dibawa" | "diisi"; urutan: number; }
+interface SelectOption { id: number; nama?: string; nama_transporter?: string; nama_supir?: string; nama_item?: string; kode?: string; no_sim?: string; tgl_berlaku_sim?: string; jenis_sim?: string; is_active?: boolean | number | string; }
+interface ChecklistItem { id: number; nama_item: string; urutan: number; is_active?: boolean | number | string; }
+interface MuatanItem { id: number; nama_item: string; jenis: "both" | "dibawa" | "diisi"; urutan: number; is_active?: boolean | number | string; }
 
 type TipeKegiatan = "loading_lokal" | "loading_export" | "unloading_lokal" | "unloading_import" | "";
 type TipeKendaraan = "bak_terbuka" | "tangki" | "umum" | "box" | "container" | "";
@@ -547,6 +547,19 @@ export default function VcfRegisterPage() {
               <div>
                 <label className="form-label">No. SIM</label>
                 <input type="text" className="form-input bg-slate-50 dark:bg-white/5" value={allDrivers.find(d => String(d.id) === driverId)?.no_sim || ""} readOnly placeholder="Terisi otomatis" />
+              </div>
+              <div>
+                <label className="form-label">Berlaku SIM</label>
+                <input 
+                  type="text" 
+                  className="form-input bg-slate-50 dark:bg-white/5" 
+                  value={(() => {
+                    const d = allDrivers.find(d => String(d.id) === driverId);
+                    return d?.tgl_berlaku_sim ? d.tgl_berlaku_sim.split('T')[0] : "";
+                  })()} 
+                  readOnly 
+                  placeholder="Terisi otomatis" 
+                />
               </div>
 
             </div>

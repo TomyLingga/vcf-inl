@@ -22,7 +22,7 @@ interface VcfDetail {
   tipe_kendaraan?: string;
   tahun_kendaraan?: number;
   transporter?: { nama_transporter: string };
-  driver?: { nama_supir: string; no_sim: string; jenis_sim?: string };
+  driver?: { nama_supir: string; no_sim: string; jenis_sim?: string; tgl_berlaku_sim?: string };
   kelengkapan_supir?: { id: number; item_id: number; nilai: any; keterangan?: string; item: { nama_item: string } }[];
   pemeriksaan_masuk?: { id: number; item_id: number; nilai: string; keterangan?: string; item: { nama_item: string }; petugas?: { nama: string }; waktu_input?: string; created_at?: string }[];
   pemeriksaan_keluar?: { id: number; item_id: number; nilai: string; keterangan?: string; item: { nama_item: string }; petugas?: { nama: string }; waktu_input?: string; created_at?: string }[];
@@ -217,7 +217,14 @@ export default function PrintVCF({ vcf, onClose }: Props) {
             <td colSpan={2} style={PRINT_STYLES.CELL}><strong>Tahun Unit</strong>: <UL w={60} val={vcf.tahun_kendaraan} /></td>
           </tr>
           <tr>
-            <td colSpan={2} style={PRINT_STYLES.CELL}><strong>SIM Supir</strong>: <UL w={80} val={vcf.driver?.no_sim} /> ( <UL w={30} val={vcf.driver?.jenis_sim} /> )</td>
+            <td colSpan={2} style={PRINT_STYLES.CELL}>
+              <strong>SIM Supir</strong>: <UL w={80} val={vcf.driver?.no_sim} /> ( <UL w={30} val={vcf.driver?.jenis_sim} /> )
+              {vcf.driver?.tgl_berlaku_sim && (
+                <span style={{ marginLeft: 8, fontSize: 8 }}>
+                  Berlaku s/d: <UL w={60} val={vcf.driver.tgl_berlaku_sim.split('T')[0]} />
+                </span>
+              )}
+            </td>
             <td colSpan={2} style={PRINT_STYLES.CELL}></td>
           </tr>
 
