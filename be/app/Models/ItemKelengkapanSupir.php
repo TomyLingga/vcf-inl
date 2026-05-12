@@ -18,6 +18,10 @@ class ItemKelengkapanSupir extends Model
         'is_active'
     ];
 
+    protected $casts = [
+        'is_active' => 'boolean'
+    ];
+
     public function vcfs()
     {
         return $this->hasMany(VcfKelengkapanSupir::class, 'item_id');

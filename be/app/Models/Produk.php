@@ -21,6 +21,10 @@ class Produk extends Model
         'is_active'
     ];
 
+    protected $casts = [
+        'is_active' => 'boolean'
+    ];
+
     public function vcfs()
     {
         return $this->hasMany(Vcf::class, 'produk_id');

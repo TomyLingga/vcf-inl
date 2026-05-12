@@ -19,6 +19,10 @@ class JenisKendaraan extends Model
         'is_active'
     ];
 
+    protected $casts = [
+        'is_active' => 'boolean'
+    ];
+
     public function vcfs()
     {
         return $this->hasMany(Vcf::class, 'jenis_kendaraan_id');

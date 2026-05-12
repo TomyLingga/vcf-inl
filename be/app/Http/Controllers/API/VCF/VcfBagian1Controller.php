@@ -186,6 +186,9 @@ class VcfBagian1Controller extends Controller
             'muatan_diisi.*.item_muatan_id' => 'required|exists:item_muatans,id',
             'muatan_diisi.*.nilai'          => 'nullable|string|max:255',
             'muatan_diisi.*.keterangan'     => 'nullable|string',
+        ], [
+            'tahun_kendaraan.integer' => 'Tahun kendaraan harus berupa angka.',
+            'tahun_kendaraan.max'     => 'Tahun kendaraan tidak boleh lebih dari ' . date('Y') . '.',
         ]);
 
         DB::beginTransaction();
@@ -341,6 +344,9 @@ class VcfBagian1Controller extends Controller
             'muatan_diisi.*.item_muatan_id'      => 'required|exists:item_muatans,id',
             'muatan_diisi.*.nilai'               => 'nullable|string|max:255',
             'muatan_diisi.*.keterangan'          => 'nullable|string',
+        ], [
+            'tahun_kendaraan.integer' => 'Tahun kendaraan harus berupa angka.',
+            'tahun_kendaraan.max'     => 'Tahun kendaraan tidak boleh lebih dari ' . date('Y') . '.',
         ]);
 
         DB::beginTransaction();

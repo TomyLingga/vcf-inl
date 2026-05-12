@@ -216,6 +216,14 @@ export default function VcfRegisterPage() {
     if (!jenisKendaraanId)
       addError("jenisKendaraan", "Informasi Kendaraan", "Jenis Kendaraan", "field-jenis-kendaraan");
 
+    if (tahunKendaraan) {
+      const year = parseInt(tahunKendaraan, 10);
+      const currentYear = new Date().getFullYear();
+      if (isNaN(year) || year > currentYear) {
+        addError("tahunKendaraan", "Informasi Kendaraan", "Tahun Kendaraan (Maks. " + currentYear + ")", "field-tahun-kendaraan");
+      }
+    }
+
     const emptyChecklistItems = checklistItems.filter(item => checklist[item.id] === null);
     if (emptyChecklistItems.length > 0)
       addError("checklist", "Kelengkapan Supir", `${emptyChecklistItems.length} item belum dijawab`, "field-checklist");
@@ -545,9 +553,23 @@ export default function VcfRegisterPage() {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
-            <div>
+            <div id="field-tahun-kendaraan" data-field-error={fieldErrors.tahunKendaraan ? "true" : undefined}>
               <label className="form-label">Tahun Kendaraan</label>
-              <input type="number" className="form-input" placeholder="Contoh: 2022" value={tahunKendaraan} onChange={e => setTahunKendaraan(e.target.value)} />
+              <input 
+                type="number" 
+                className={`form-input ${fieldErrors.tahunKendaraan ? 'border-red-500 bg-red-50 dark:bg-red-500/10' : ''}`} 
+                placeholder="Contoh: 2022" 
+                value={tahunKendaraan} 
+                onChange={e => {
+                  setTahunKendaraan(e.target.value);
+                  if (fieldErrors.tahunKendaraan) {
+                    setFieldErrors(prev => ({ ...prev, tahunKendaraan: false }));
+                  }
+                }} 
+              />
+              {fieldErrors.tahunKendaraan && (
+                <p className="text-[11px] text-red-500 mt-1">Tahun tidak boleh lebih dari {new Date().getFullYear()}</p>
+              )}
             </div>
             <div>
               <label className="form-label">Tujuan</label>

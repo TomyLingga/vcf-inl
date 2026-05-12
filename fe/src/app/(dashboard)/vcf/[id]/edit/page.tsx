@@ -107,11 +107,11 @@ export default function VcfEditBagian1Page() {
         masterApi.getItemMuatan(),
       ]);
 
-      const tData = (tRes.data.data || tRes.data).filter((t: SelectOption) => t.is_active !== false);
-      const dData = (dRes.data.data || dRes.data).filter((d: SelectOption) => d.is_active !== false);
-      const jData = (jRes.data.data || jRes.data).filter((j: SelectOption) => j.is_active !== false);
-      const cItemsRaw: ChecklistItem[] = (cRes.data.data || cRes.data).filter((c: ChecklistItem) => c.is_active !== false);
-      const mItemsRaw: MuatanItem[] = (mRes.data.data || mRes.data).filter((m: MuatanItem) => m.is_active !== false);
+      const tData = (tRes.data.data || tRes.data).filter((t: SelectOption) => t.is_active === true || t.is_active === 1 || t.is_active === "1");
+      const dData = (dRes.data.data || dRes.data).filter((d: SelectOption) => d.is_active === true || d.is_active === 1 || d.is_active === "1");
+      const jData = (jRes.data.data || jRes.data).filter((j: SelectOption) => j.is_active === true || j.is_active === 1 || j.is_active === "1");
+      const cItemsRaw: ChecklistItem[] = (cRes.data.data || cRes.data).filter((c: ChecklistItem) => c.is_active === true || c.is_active === 1 || c.is_active === "1");
+      const mItemsRaw: MuatanItem[] = (mRes.data.data || mRes.data).filter((m: MuatanItem) => m.is_active === true || m.is_active === 1 || m.is_active === "1");
 
       setTransporters(tData);
       setAllDrivers(dData);
@@ -208,6 +208,15 @@ export default function VcfEditBagian1Page() {
     if (!driverId) { setError("Pilih supir."); return; }
     if (!noPolisi) { setError("Masukkan nomor polisi."); return; }
     if (!jenisKendaraanId) { setError("Pilih jenis kendaraan."); return; }
+
+    if (tahunKendaraan) {
+      const year = parseInt(tahunKendaraan, 10);
+      const currentYear = new Date().getFullYear();
+      if (isNaN(year) || year > currentYear) {
+        setError(`Tahun kendaraan tidak boleh lebih dari ${currentYear}.`);
+        return;
+      }
+    }
 
     // Ensure checklist fully filled for master items (after master loaded)
     const allItemsFilled = checklistItems.length > 0 && checklistItems.every((item) => checklist[item.id] !== null && typeof checklist[item.id] !== "undefined");
@@ -401,7 +410,15 @@ export default function VcfEditBagian1Page() {
                 </div>
                 <div>
                   <label className="form-label">Tahun</label>
-                  <input type="number" className="form-input" value={tahunKendaraan} onChange={(e) => setTahunKendaraan(e.target.value)} />
+                  <input 
+                    type="number" 
+                    className={`form-input ${error.includes("Tahun kendaraan") ? 'border-red-500 bg-red-50' : ''}`} 
+                    value={tahunKendaraan} 
+                    onChange={(e) => {
+                      setTahunKendaraan(e.target.value);
+                      if (error.includes("Tahun kendaraan")) setError("");
+                    }} 
+                  />
                 </div>
               </div>
             </div>

@@ -19,6 +19,11 @@ class Driver extends Model
         'is_active',
     ];
 
+    protected $casts = [
+        'is_active' => 'boolean',
+        'tgl_berlaku_sim' => 'date',
+    ];
+
 
     public function vcfs()
     {

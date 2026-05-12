@@ -20,6 +20,10 @@ class ItemMuatan extends Model
         'is_active'
     ];
 
+    protected $casts = [
+        'is_active' => 'boolean'
+    ];
+
     public function muatanDibawa()
     {
         return $this->hasMany(VcfMuatanDibawa::class, 'item_muatan_id');
