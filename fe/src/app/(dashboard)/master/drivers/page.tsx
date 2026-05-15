@@ -4,11 +4,13 @@ import { useState, useEffect, useCallback } from "react";
 import { masterApi } from "@/lib/api";
 import { clearMasterDataCache } from "@/lib/masterDataCache";
 import { exportToExcel } from "@/lib/exportUtils";
-import { formatDate } from "@/lib/utils";
+import { formatDate, getErrorMessage } from "@/lib/utils";
 import * as XLSX from 'xlsx';
 import PrintMasterTable from "@/components/print/PrintMasterTable";
-import { downloadImportTemplate, parseAndImportExcel } from "@/lib/importTemplate";
+import { downloadImportTemplate, parseExcelPreview, importDataBatch } from "@/lib/importTemplate";
 import DeleteConfirmModal from "@/components/DeleteConfirmModal";
+import ImportConfirmModal from "@/components/ImportConfirmModal";
+import ImportResultModal from "@/components/ImportResultModal";
 
 interface Driver {
   id: number;
@@ -46,6 +48,14 @@ export default function DriversPage() {
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [deleteId, setDeleteId] = useState<number | null>(null);
   const [deleting, setDeleting] = useState(false);
+
+  // Import states
+  const [showImportModal, setShowImportModal] = useState(false);
+  const [importData, setImportData] = useState<any[]>([]);
+  const [importLoading, setImportLoading] = useState(false);
+  const [importErrors, setImportErrors] = useState<string[]>([]);
+  const [showResultModal, setShowResultModal] = useState(false);
+  const [importResult, setImportResult] = useState({ success: 0, failed: 0, errors: [] as string[] });
 
   // Filters
   const [search, setSearch] = useState("");
@@ -112,7 +122,7 @@ export default function DriversPage() {
       clearMasterDataCache();
       fetchData();
     } catch (err: any) {
-      alert(err.response?.data?.message || "Gagal mengubah status.");
+      alert(getErrorMessage(err, "Gagal mengubah status."));
     }
   };
 
@@ -129,9 +139,8 @@ export default function DriversPage() {
       clearMasterDataCache();
       setShowDeleteModal(false);
       fetchData();
-    } catch (err: unknown) {
-      const e = err as { response?: { data?: { message?: string } } };
-      alert(e.response?.data?.message || "Gagal menghapus data.");
+    } catch (err: any) {
+      alert(getErrorMessage(err, "Gagal menghapus data."));
     } finally {
       setDeleting(false);
       setDeleteId(null);
@@ -152,9 +161,8 @@ export default function DriversPage() {
       clearMasterDataCache();
       setShowModal(false);
       fetchData();
-    } catch (err: unknown) {
-      const e = err as { response?: { data?: { message?: string } } };
-      setError(e.response?.data?.message || "Gagal menyimpan data.");
+    } catch (err: any) {
+      setError(getErrorMessage(err, "Gagal menyimpan data."));
     } finally {
       setSaving(false);
     }
@@ -190,7 +198,7 @@ export default function DriversPage() {
                 <input type="file" accept=".xlsx,.xls" className="hidden" onChange={async (e) => {
                   const file = e.target.files?.[0]; if (!file) return;
                   e.target.value = "";
-                  const result = await parseAndImportExcel(
+                  const { data, errors } = await parseExcelPreview(
                     file,
                     (row) => {
                       const nama = String(row["nama_supir *"] ?? row["nama_supir"] ?? "").trim();
@@ -199,16 +207,18 @@ export default function DriversPage() {
                       return {
                         nama_supir: nama,
                         no_sim: sim,
-                        jenis_sim: String(row["jenis_sim"] ?? "BII Umum").trim(),
-                        tgl_berlaku_sim: String(row["tgl_berlaku_sim (YYYY-MM-DD)"] ?? row["tgl_berlaku_sim"] ?? "").trim() || null,
-                        is_active: String(row["is_active (Ya/Tidak)"] ?? row["is_active"] ?? "Ya").trim().toLowerCase() !== "tidak",
+                        jenis_sim: String(row["jenis_sim"] ?? "BII Umum").trim() || "-",
+                        tgl_berlaku_sim: String(row["tgl_berlaku_sim (YYYY-MM-DD)"] ?? row["tgl_berlaku_sim"] ?? "").trim() || "-",
+                        is_active: String(row["is_active (Ya/Tidak)"] ?? row["is_active"] ?? "Ya").trim().toLowerCase() !== "tidak" ? "Ya" : "Tidak",
                       };
-                    },
-                    (data) => masterApi.createDriver(data)
+                    }
                   );
-                  clearMasterDataCache();
-                  fetchData();
-                  alert(`Import selesai: ${result.success} berhasil, ${result.failed} gagal.${result.errors.length ? "\n\nDetail:\n" + result.errors.slice(0, 5).join("\n") : ""}`);
+                  setImportData(data);
+                  setImportErrors(errors);
+                  setShowImportModal(true);
+                  if (errors.length > 0) {
+                    console.warn("Import preview errors:", errors);
+                  }
                 }} />
               </label>
             </div>
@@ -468,6 +478,61 @@ export default function DriversPage() {
           onClose={() => setIsPrinting(false)}
         />
       )}
+
+      <ImportConfirmModal
+        isOpen={showImportModal}
+        onClose={() => { setShowImportModal(false); setImportData([]); setImportErrors([]); }}
+        onConfirm={async (selectedData) => {
+          setImportLoading(true);
+          const result = await importDataBatch(
+            selectedData,
+            (data) => masterApi.createDriver({
+              nama_supir: data.nama_supir,
+              no_sim: data.no_sim,
+              jenis_sim: data.jenis_sim === "-" ? "BII Umum" : data.jenis_sim,
+              tgl_berlaku_sim: data.tgl_berlaku_sim === "-" ? null : data.tgl_berlaku_sim,
+              is_active: data.is_active === "Ya"
+            })
+          );
+          setImportLoading(false);
+          setShowImportModal(false);
+          setImportData([]);
+          clearMasterDataCache();
+          fetchData();
+          return result;
+        }}
+        onResult={(result) => {
+          setImportResult(result);
+          setShowResultModal(true);
+        }}
+        data={importData}
+        columns={[
+          { key: "nama_supir", label: "Nama Supir" },
+          { key: "no_sim", label: "No. SIM" },
+          { key: "jenis_sim", label: "Jenis SIM" },
+          { key: "tgl_berlaku_sim", label: "Berlaku s/d" },
+          { key: "is_active", label: "Status" },
+        ]}
+        title="Konfirmasi Import Supir"
+        loading={importLoading}
+      />
+
+      <ImportResultModal
+        isOpen={showResultModal}
+        onClose={() => setShowResultModal(false)}
+        success={importResult.success}
+        failed={importResult.failed}
+        errors={importResult.errors}
+        title="Hasil Import Supir"
+      />
+      <DeleteConfirmModal
+        isOpen={showDeleteModal}
+        onClose={() => { setShowDeleteModal(false); setDeleteId(null); }}
+        onConfirm={handleDeleteConfirm}
+        loading={deleting}
+        title="Hapus Data Supir"
+        message="Apakah Anda yakin ingin menghapus data supir ini secara permanen? Tindakan ini tidak dapat dibatalkan."
+      />
     </div>
   );
 }

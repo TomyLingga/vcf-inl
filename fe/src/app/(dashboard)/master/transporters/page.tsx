@@ -3,10 +3,13 @@
 import { useState, useEffect, useCallback } from "react";
 import { masterApi } from "@/lib/api";
 import { exportToExcel } from "@/lib/exportUtils";
+import { getErrorMessage } from "@/lib/utils";
 import * as XLSX from 'xlsx';
 import PrintMasterTable from "@/components/print/PrintMasterTable";
-import { downloadImportTemplate, parseAndImportExcel } from "@/lib/importTemplate";
+import { downloadImportTemplate, parseExcelPreview, importDataBatch } from "@/lib/importTemplate";
 import DeleteConfirmModal from "@/components/DeleteConfirmModal";
+import ImportConfirmModal from "@/components/ImportConfirmModal";
+import ImportResultModal from "@/components/ImportResultModal";
 
 interface Transporter {
   id: number;
@@ -29,6 +32,14 @@ export default function TransportersPage() {
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [deleteId, setDeleteId] = useState<number | null>(null);
   const [deleting, setDeleting] = useState(false);
+
+  // Import states
+  const [showImportModal, setShowImportModal] = useState(false);
+  const [importData, setImportData] = useState<any[]>([]);
+  const [importLoading, setImportLoading] = useState(false);
+  const [importErrors, setImportErrors] = useState<string[]>([]);
+  const [showResultModal, setShowResultModal] = useState(false);
+  const [importResult, setImportResult] = useState({ success: 0, failed: 0, errors: [] as string[] });
 
   // Filters
   const [search, setSearch] = useState("");
@@ -81,7 +92,7 @@ export default function TransportersPage() {
       await masterApi.updateTransporter(item.id, { is_active: !item.is_active });
       fetchData();
     } catch (err: any) {
-      alert(err.response?.data?.message || "Gagal mengubah status.");
+      alert(getErrorMessage(err, "Gagal mengubah status."));
     }
   };
 
@@ -118,9 +129,8 @@ export default function TransportersPage() {
       }
       setShowModal(false);
       fetchData();
-    } catch (err: unknown) {
-      const axiosError = err as { response?: { data?: { message?: string } } };
-      setError(axiosError.response?.data?.message || "Gagal menyimpan data.");
+    } catch (err: any) {
+      alert(getErrorMessage(err, "Gagal menyimpan data."));
     } finally {
       setSaving(false);
     }
@@ -164,7 +174,7 @@ export default function TransportersPage() {
                 <input type="file" accept=".xlsx,.xls" className="hidden" onChange={async (e) => {
                   const file = e.target.files?.[0]; if (!file) return;
                   e.target.value = "";
-                  const result = await parseAndImportExcel(
+                  const { data, errors } = await parseExcelPreview(
                     file,
                     (row) => {
                       const nama = String(row["nama_transporter *"] ?? row["nama_transporter"] ?? "").trim();
@@ -173,13 +183,16 @@ export default function TransportersPage() {
                       return {
                         nama_transporter: nama,
                         kode,
-                        is_active: String(row["is_active (Ya/Tidak)"] ?? row["is_active"] ?? "Ya").trim().toLowerCase() !== "tidak",
+                        is_active: String(row["is_active (Ya/Tidak)"] ?? row["is_active"] ?? "Ya").trim().toLowerCase() !== "tidak" ? "Ya" : "Tidak",
                       };
-                    },
-                    (data) => masterApi.createTransporter(data)
+                    }
                   );
-                  fetchData();
-                  alert(`Import selesai: ${result.success} berhasil, ${result.failed} gagal.${result.errors.length ? "\n\nDetail:\n" + result.errors.slice(0, 5).join("\n") : ""}`);
+                  setImportData(data);
+                  setImportErrors(errors);
+                  setShowImportModal(true);
+                  if (errors.length > 0) {
+                    console.warn("Import preview errors:", errors);
+                  }
                 }} />
               </label>
             </div>
@@ -426,6 +439,48 @@ export default function TransportersPage() {
           onClose={() => setIsPrinting(false)}
         />
       )}
+
+      <ImportConfirmModal
+        isOpen={showImportModal}
+        onClose={() => { setShowImportModal(false); setImportData([]); setImportErrors([]); }}
+        onConfirm={async (selectedData) => {
+          setImportLoading(true);
+          const result = await importDataBatch(
+            selectedData,
+            (data) => masterApi.createTransporter({
+              nama_transporter: data.nama_transporter,
+              kode: data.kode,
+              is_active: data.is_active === "Ya"
+            })
+          );
+          setImportLoading(false);
+          setShowImportModal(false);
+          setImportData([]);
+          fetchData();
+          return result;
+        }}
+        onResult={(result) => {
+          setImportResult(result);
+          setShowResultModal(true);
+        }}
+        data={importData}
+        columns={[
+          { key: "kode", label: "Kode" },
+          { key: "nama_transporter", label: "Nama Transporter" },
+          { key: "is_active", label: "Status" },
+        ]}
+        title="Konfirmasi Import Transporter"
+        loading={importLoading}
+      />
+
+      <ImportResultModal
+        isOpen={showResultModal}
+        onClose={() => setShowResultModal(false)}
+        success={importResult.success}
+        failed={importResult.failed}
+        errors={importResult.errors}
+        title="Hasil Import Transporter"
+      />
     </div>
   );
 }

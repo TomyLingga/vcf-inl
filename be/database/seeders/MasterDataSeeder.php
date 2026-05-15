@@ -34,11 +34,10 @@ class MasterDataSeeder extends Seeder
 
         // 2. Produk
         DB::table('produks')->insert([
-            ['id' => 1, 'nama' => 'CPO (Crude Palm Oil)',  'keterangan' => 'Crude Palm Oil',  'kode' => 'CPO',    'warna_nomor_urut' => 'yellow', 'nomor_urut' => 1, 'is_active' => true, 'created_at' => now(), 'updated_at' => now()],
-            ['id' => 2, 'nama' => 'PKO (Palm Kernel Oil)', 'keterangan' => 'Palm Kernel Oil', 'kode' => 'PKO',    'warna_nomor_urut' => 'green',  'nomor_urut' => 2, 'is_active' => true, 'created_at' => now(), 'updated_at' => now()],
-            ['id' => 3, 'nama' => 'Stearin',               'keterangan' => 'Palm Stearin',    'kode' => 'STR',    'warna_nomor_urut' => 'white',  'nomor_urut' => 3, 'is_active' => true, 'created_at' => now(), 'updated_at' => now()],
-            ['id' => 4, 'nama' => 'PFAD',                  'keterangan' => 'PFAD',             'kode' => 'PFAD',   'warna_nomor_urut' => 'red',    'nomor_urut' => 4, 'is_active' => true, 'created_at' => now(), 'updated_at' => now()],
-            ['id' => 5, 'nama' => 'Lain-lain',             'keterangan' => 'Produk Lainnya',  'kode' => 'OTHERS', 'warna_nomor_urut' => 'gray',   'nomor_urut' => 5, 'is_active' => true, 'created_at' => now(), 'updated_at' => now()],
+            ['id' => 1, 'nama' => 'CPO (Crude Palm Oil)',  'keterangan' => 'Crude Palm Oil',  'kode' => 'CPO',    'nomor_urut' => 1, 'is_active' => true, 'created_at' => now(), 'updated_at' => now()],
+            ['id' => 2, 'nama' => 'PKO (Palm Kernel Oil)', 'keterangan' => 'Palm Kernel Oil', 'kode' => 'PKO',    'nomor_urut' => 2, 'is_active' => true, 'created_at' => now(), 'updated_at' => now()],
+            ['id' => 3, 'nama' => 'Stearin',               'keterangan' => 'Palm Stearin',    'kode' => 'STR',    'nomor_urut' => 3, 'is_active' => true, 'created_at' => now(), 'updated_at' => now()],
+            ['id' => 4, 'nama' => 'PFAD',                  'keterangan' => 'PFAD',             'kode' => 'PFAD',   'nomor_urut' => 4, 'is_active' => true, 'created_at' => now(), 'updated_at' => now()],
         ]);
 
         // 3. Jenis Kendaraan (Sesuai dropdown di form registrasi)
@@ -130,8 +129,7 @@ class MasterDataSeeder extends Seeder
             ['id' => 1, 'nama_item' => 'Minyak',         'jenis' => 'both',   'keterangan' => null, 'urutan' => 1, 'is_active' => true, 'created_at' => now(), 'updated_at' => now()],
             ['id' => 2, 'nama_item' => 'Fuel/Gas/Chemical','jenis' => 'dibawa', 'keterangan' => null, 'urutan' => 2, 'is_active' => true, 'created_at' => now(), 'updated_at' => now()],
             ['id' => 3, 'nama_item' => 'Sparepart',      'jenis' => 'dibawa', 'keterangan' => null, 'urutan' => 3, 'is_active' => true, 'created_at' => now(), 'updated_at' => now()],
-            ['id' => 4, 'nama_item' => 'Produk Lainnya', 'jenis' => 'dibawa', 'keterangan' => null, 'urutan' => 4, 'is_active' => true, 'created_at' => now(), 'updated_at' => now()],
-            ['id' => 5, 'nama_item' => 'Limbah',         'jenis' => 'diisi',  'keterangan' => null, 'urutan' => 5, 'is_active' => true, 'created_at' => now(), 'updated_at' => now()],
+            ['id' => 4, 'nama_item' => 'Limbah',         'jenis' => 'diisi',  'keterangan' => null, 'urutan' => 4, 'is_active' => true, 'created_at' => now(), 'updated_at' => now()],
         ]);
 
         // 9. Item Pemeriksaan Masuk (Sistem tipe_jawaban terbaru)

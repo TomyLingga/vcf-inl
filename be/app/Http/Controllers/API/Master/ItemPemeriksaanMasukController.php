@@ -72,8 +72,11 @@ class ItemPemeriksaanMasukController extends Controller
             // Auto-assign urutan
             $validated['urutan'] = ItemPemeriksaanMasuk::max('urutan') + 1;
 
-            if (!$validated['has_detail']) {
+            // Ensure keterangan_detail exists and is null when has_detail is false
+            if (!($validated['has_detail'] ?? false)) {
                 $validated['keterangan_detail'] = null;
+            } else {
+                $validated['keterangan_detail'] = $validated['keterangan_detail'] ?? null;
             }
 
             $kode = $validated['kode'];
@@ -86,7 +89,7 @@ class ItemPemeriksaanMasukController extends Controller
                 'kode'              => $kode,
                 'tipe_jawaban'      => $validated['tipe_jawaban'],
                 'has_detail'        => $validated['has_detail'] ?? false,
-                'keterangan_detail' => $validated['keterangan_detail'],
+                'keterangan_detail' => $validated['keterangan_detail'] ?? null,
                 'urutan'            => $validated['urutan'],
                 'is_active'         => $validated['is_active'] ?? true,
             ]);
@@ -133,9 +136,11 @@ class ItemPemeriksaanMasukController extends Controller
                 'is_active'         => 'boolean',
             ]);
 
-            // jika kosong has_detail
-            if (array_key_exists('has_detail', $validated) && !$validated['has_detail']) {
+            // jika has_detail false atau tidak ada, kosongkan keterangan_detail
+            if (!($validated['has_detail'] ?? false)) {
                 $validated['keterangan_detail'] = null;
+            } else {
+                $validated['keterangan_detail'] = $validated['keterangan_detail'] ?? null;
             }
 
             $itemPemeriksaanMasuk->update($validated);

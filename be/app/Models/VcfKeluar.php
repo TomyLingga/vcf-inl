@@ -16,7 +16,8 @@ class VcfKeluar extends Model
         'jam_keluar',
         'emergency_respon_kontak',
         'petugas_id',
-        'waktu_input'
+        'waktu_input',
+        'keterangan'
     ];
 
     public function vcf(){

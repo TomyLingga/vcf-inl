@@ -14,7 +14,8 @@ class VcfSegelKeluar extends Model
     protected $fillable = [
         'vcf_id',
         'jumlah_segel',
-        'petugas_id'
+        'petugas_id',
+        'keterangan'
     ];
 
     public function vcf()

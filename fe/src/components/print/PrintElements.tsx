@@ -17,30 +17,34 @@ export const PRINT_STYLES = {
    COMPONENTS
 ───────────────────────────────────────────── */
 
-/** Checkbox that shows X when checked */
-export const CK = ({ checked, label }: { checked?: boolean; label: string }) => (
+/** Checkbox that shows X when checked. Highlight mode makes the label bold and bigger when checked. */
+export const CK = ({ checked, label, highlight = false }: { checked?: boolean; label: string; highlight?: boolean }) => (
   <span style={{ display: "inline-flex", alignItems: "center", gap: 3, marginRight: 10, whiteSpace: "nowrap" }}>
     <span style={{
       display: "inline-flex", alignItems: "center", justifyContent: "center",
-      width: 10, height: 10, border: "1px solid #000", background: "#fff",
-      flexShrink: 0, fontSize: 8, fontWeight: "bold", color: "#000",
+      width: 10, height: 10, border: "1px solid #000", background: checked ? "#000" : "#fff",
+      flexShrink: 0, fontSize: 8, fontWeight: "bold", color: checked ? "#fff" : "#000",
       lineHeight: 1,
     }}>
-      {checked ? "X" : ""}
+      {checked ? "✓" : ""}
     </span>
-    <span style={{ fontSize: 9 }}>{label}</span>
+    <span style={{
+      fontSize: highlight && checked ? 11 : 9,
+      fontWeight: highlight && checked ? "bold" : "normal",
+      color: highlight && checked ? "#000" : "inherit",
+    }}>{label}</span>
   </span>
 );
 
 /** Underline field with fixed or dynamic width */
-export const UL = ({ w, val }: { w?: number | string; val?: string | number }) => (
+export const UL = ({ w, val, textAlign = "center" }: { w?: number | string; val?: string | number; textAlign?: "left" | "center" | "right" }) => (
   <span style={{
     display: "inline-block",
     borderBottom: "1px solid #000",
     minWidth: w || 40,
     fontSize: 9,
     paddingBottom: 0,
-    textAlign: "center",
+    textAlign: textAlign,
     verticalAlign: "bottom",
     marginLeft: 2,
     marginRight: 2,

@@ -4,36 +4,28 @@ import { useState, useEffect, useCallback } from "react";
 import { masterApi } from "@/lib/api";
 import { clearMasterDataCache } from "@/lib/masterDataCache";
 import { exportToExcel } from "@/lib/exportUtils";
+import { getErrorMessage } from "@/lib/utils";
 import * as XLSX from 'xlsx';
 import PrintMasterTable from "@/components/print/PrintMasterTable";
-import { downloadImportTemplate, parseAndImportExcel } from "@/lib/importTemplate";
+import { downloadImportTemplate, parseExcelPreview, importDataBatch } from "@/lib/importTemplate";
 import DeleteConfirmModal from "@/components/DeleteConfirmModal";
+import ImportConfirmModal from "@/components/ImportConfirmModal";
+import ImportResultModal from "@/components/ImportResultModal";
 
 interface Produk {
   id: number;
   nama: string;
   kode: string;
   keterangan: string;
-  warna_nomor_urut: string;
   is_active: boolean;
 }
-
-const WARNA_OPTIONS = [
-  { value: "hitam", label: "Hitam", hex: "#1f2937" },
-  { value: "merah", label: "Merah", hex: "#ef4444" },
-  { value: "biru", label: "Biru", hex: "#3b82f6" },
-  { value: "hijau", label: "Hijau", hex: "#22c55e" },
-  { value: "kuning", label: "Kuning", hex: "#eab308" },
-  { value: "ungu", label: "Ungu", hex: "#a855f7" },
-  { value: "orange", label: "Orange", hex: "#f97316" },
-];
 
 export default function ProdukPage() {
   const [data, setData] = useState<Produk[]>([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const [editing, setEditing] = useState<Produk | null>(null);
-  const [form, setForm] = useState({ nama: "", kode: "", keterangan: "", warna_nomor_urut: "hitam", is_active: true });
+  const [form, setForm] = useState({ nama: "", kode: "", keterangan: "", is_active: true });
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const [isPrinting, setIsPrinting] = useState(false);
@@ -43,6 +35,14 @@ export default function ProdukPage() {
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [deleteId, setDeleteId] = useState<number | null>(null);
   const [deleting, setDeleting] = useState(false);
+
+  // Import states
+  const [showImportModal, setShowImportModal] = useState(false);
+  const [importData, setImportData] = useState<any[]>([]);
+  const [importLoading, setImportLoading] = useState(false);
+  const [importErrors, setImportErrors] = useState<string[]>([]);
+  const [showResultModal, setShowResultModal] = useState(false);
+  const [importResult, setImportResult] = useState({ success: 0, failed: 0, errors: [] as string[] });
 
   const fetchData = useCallback(async () => {
     setLoading(true);
@@ -65,7 +65,7 @@ export default function ProdukPage() {
 
   const openCreate = () => {
     setEditing(null);
-    setForm({ nama: "", kode: "", keterangan: "", warna_nomor_urut: "hitam", is_active: true });
+    setForm({ nama: "", kode: "", keterangan: "", is_active: true });
     setError("");
     setShowModal(true);
   };
@@ -76,7 +76,6 @@ export default function ProdukPage() {
       nama: item.nama,
       kode: item.kode,
       keterangan: item.keterangan || "",
-      warna_nomor_urut: item.warna_nomor_urut || "hitam",
       is_active: !!item.is_active,
     });
     setError("");
@@ -89,7 +88,7 @@ export default function ProdukPage() {
       clearMasterDataCache();
       fetchData();
     } catch (err: any) {
-      alert(err.response?.data?.message || "Gagal mengubah status.");
+      alert(getErrorMessage(err, "Gagal mengubah status."));
     }
   };
 
@@ -104,7 +103,7 @@ export default function ProdukPage() {
       setShowDeleteModal(false);
       fetchData();
     } catch (err: any) {
-      alert(err.response?.data?.message || "Gagal menghapus data.");
+      alert(getErrorMessage(err, "Gagal menghapus data."));
     } finally {
       setDeleting(false);
       setDeleteId(null);
@@ -126,7 +125,7 @@ export default function ProdukPage() {
       setShowModal(false);
       fetchData();
     } catch (err: any) {
-      setError(err.response?.data?.message || "Gagal menyimpan data.");
+      setError(getErrorMessage(err, "Gagal menyimpan data."));
     } finally {
       setSaving(false);
     }
@@ -148,10 +147,10 @@ export default function ProdukPage() {
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="m6 9 6 6 6-6"/></svg>
             </button>
             <div className="absolute right-0 mt-1 w-52 border border-border rounded-xl shadow-xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-50" style={{ background: "var(--bg-secondary)" }}>
-              <button onClick={() => downloadImportTemplate("Produk", ["kode *", "nama *", "keterangan", "warna_nomor_urut", "is_active (Ya/Tidak)"], [
-                ["CPO", "Crude Palm Oil", "Minyak sawit mentah", "hitam", "Ya"],
-                ["RBDPO", "Refined Bleached Deodorized Palm Oil", "Minyak sawit olahan", "biru", "Ya"],
-                ["PFAD", "Palm Fatty Acid Distillate", "Produk samping", "merah", "Ya"]
+              <button onClick={() => downloadImportTemplate("Produk", ["kode *", "nama *", "keterangan", "is_active (Ya/Tidak)"], [
+                ["CPO", "Crude Palm Oil", "Minyak sawit mentah", "Ya"],
+                ["RBDPO", "Refined Bleached Deodorized Palm Oil", "Minyak sawit olahan", "Ya"],
+                ["PFAD", "Palm Fatty Acid Distillate", "Produk samping", "Ya"]
               ])} className="w-full text-left px-4 py-2 text-sm hover:bg-bg-card-hover first:rounded-t-xl flex items-center gap-2" style={{ color: "var(--text-primary)" }}>
                 <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><polyline points="17 8 12 3 7 8" /><line x1="12" y1="3" x2="12" y2="15" /></svg>
                 Unduh Template (.xlsx)
@@ -162,7 +161,7 @@ export default function ProdukPage() {
                 <input type="file" accept=".xlsx,.xls" className="hidden" onChange={async (e) => {
                   const file = e.target.files?.[0]; if (!file) return;
                   e.target.value = "";
-                  const result = await parseAndImportExcel(
+                  const { data, errors } = await parseExcelPreview(
                     file,
                     (row) => {
                       const kode = String(row["kode *"] ?? row["kode"] ?? "").trim();
@@ -171,16 +170,17 @@ export default function ProdukPage() {
                       return {
                         kode,
                         nama,
-                        keterangan: String(row["keterangan"] ?? "").trim() || null,
-                        warna_nomor_urut: String(row["warna_nomor_urut"] ?? "hitam").trim(),
-                        is_active: String(row["is_active (Ya/Tidak)"] ?? row["is_active"] ?? "Ya").trim().toLowerCase() !== "tidak",
+                        keterangan: String(row["keterangan"] ?? "").trim() || "-",
+                        is_active: String(row["is_active (Ya/Tidak)"] ?? row["is_active"] ?? "Ya").trim().toLowerCase() !== "tidak" ? "Ya" : "Tidak",
                       };
-                    },
-                    (data) => masterApi.createProduk(data)
+                    }
                   );
-                  clearMasterDataCache();
-                  fetchData();
-                  alert(`Import selesai: ${result.success} berhasil, ${result.failed} gagal.${result.errors.length ? "\n\nDetail:\n" + result.errors.slice(0, 5).join("\n") : ""}`);
+                  setImportData(data);
+                  setImportErrors(errors);
+                  setShowImportModal(true);
+                  if (errors.length > 0) {
+                    console.warn("Import preview errors:", errors);
+                  }
                 }} />
               </label>
             </div>
@@ -193,7 +193,7 @@ export default function ProdukPage() {
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="m6 9 6 6 6-6"/></svg>
             </button>
             <div className="absolute right-0 mt-1 w-44 border border-border rounded-xl shadow-xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-50" style={{ background: "var(--bg-secondary)" }}>
-              <button onClick={() => exportToExcel("Data_Produk", ["Kode","Nama","Keterangan","Warna","Status"], data.map(i => [i.kode,i.nama,i.keterangan,i.warna_nomor_urut,i.is_active?"Aktif":"Nonaktif"]))} className="w-full text-left px-4 py-2 text-sm hover:bg-bg-card-hover first:rounded-t-xl" style={{ color: "var(--text-primary)" }}>Excel (.xlsx)</button>
+              <button onClick={() => exportToExcel("Data_Produk", ["Kode","Nama","Keterangan","Status"], data.map(i => [i.kode,i.nama,i.keterangan,i.is_active?"Aktif":"Nonaktif"]))} className="w-full text-left px-4 py-2 text-sm hover:bg-bg-card-hover first:rounded-t-xl" style={{ color: "var(--text-primary)" }}>Excel (.xlsx)</button>
               <button onClick={() => setIsPrinting(true)} className="w-full text-left px-4 py-2 text-sm hover:bg-bg-card-hover last:rounded-b-xl" style={{ color: "var(--text-primary)" }}>Cetak / PDF</button>
             </div>
           </div>
@@ -230,35 +230,19 @@ export default function ProdukPage() {
                 <th className="px-6 py-4 text-sm font-semibold text-secondary">Kode</th>
                 <th className="px-6 py-4 text-sm font-semibold text-secondary">Nama Produk</th>
                 <th className="px-6 py-4 text-sm font-semibold text-secondary">Keterangan</th>
-                <th className="px-6 py-4 text-sm font-semibold text-secondary text-center">Warna No. Urut</th>
                 <th className="px-6 py-4 text-sm font-semibold text-secondary text-center">Status</th>
                 <th className="px-6 py-4 text-sm font-semibold text-secondary text-right">Aksi</th>
               </tr>
             </thead>
             <tbody>
               {data.length === 0 ? (
-                <tr><td colSpan={7} className="text-center py-12 text-muted">Tidak ada data produk.</td></tr>
+                <tr><td colSpan={6} className="text-center py-12 text-muted">Tidak ada data produk.</td></tr>
               ) : data.map((item, idx) => (
                 <tr key={item.id} className="border-b border-white/5 hover:bg-bg-card-hover transition-colors group">
                   <td className="px-6 py-4 text-center text-xs text-secondary font-mono">{idx + 1}</td>
                   <td className="px-6 py-4 font-mono text-xs font-bold text-blue-400">{item.kode}</td>
                   <td className="px-6 py-4 font-medium text-text-primary dark:text-white">{item.nama}</td>
                   <td className="px-6 py-4 text-sm text-secondary">{item.keterangan || "—"}</td>
-                  <td className="px-6 py-4 text-center">
-                    {(() => {
-                      const w = WARNA_OPTIONS.find(w => w.value === item.warna_nomor_urut);
-                      const hex = w?.hex || "#6b7280";
-                      return (
-                        <span
-                          className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold"
-                          style={{ background: hex + "22", border: `1px solid ${hex}55`, color: hex }}
-                        >
-                          <span className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ background: hex }} />
-                          {w?.label || item.warna_nomor_urut || "—"}
-                        </span>
-                      );
-                    })()}
-                  </td>
                   <td className="px-6 py-4 text-center">
                     <button
                       onClick={() => handleToggleActive(item)}
@@ -311,23 +295,9 @@ export default function ProdukPage() {
                   <input type="text" className="form-input" required value={form.nama} onChange={(e) => setForm(p => ({ ...p, nama: e.target.value }))} placeholder="Contoh: Crude Palm Oil" />
                 </div>
               </div>
-              <div className="mb-4">
+              <div className="mb-6">
                 <label className="form-label">Keterangan</label>
                 <input type="text" className="form-input" value={form.keterangan} onChange={(e) => setForm(p => ({ ...p, keterangan: e.target.value }))} placeholder="Keterangan opsional" />
-              </div>
-              <div className="mb-4">
-                <label className="form-label">Warna Nomor Urut</label>
-                <div className="flex flex-wrap gap-2 mt-1">
-                  {WARNA_OPTIONS.map(w => (
-                    <button key={w.value} type="button" onClick={() => setForm(p => ({ ...p, warna_nomor_urut: w.value }))}
-                      className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold border transition-all ${form.warna_nomor_urut === w.value ? "border-blue-500 bg-blue-500/10" : "border-border"}`}
-                      style={{ color: "var(--text-primary)" }}
-                    >
-                      <span className="w-3 h-3 rounded-full" style={{ background: w.hex }} />
-                      {w.label}
-                    </button>
-                  ))}
-                </div>
               </div>
               <div className="mb-6 flex items-center gap-3">
                 <input type="checkbox" id="check-active-produk" checked={form.is_active} onChange={(e) => setForm(p => ({ ...p, is_active: e.target.checked }))} style={{ width: 16, height: 16 }} />
@@ -356,11 +326,56 @@ export default function ProdukPage() {
         <PrintMasterTable
           title="Master Data — Produk"
           subtitle="Daftar produk / komoditas kendaraan"
-          headers={["Kode", "Nama Produk", "Keterangan", "Warna No. Urut", "Status"]}
-          data={data.map(i => [i.kode, i.nama, i.keterangan || "-", i.warna_nomor_urut, i.is_active ? "Aktif" : "Nonaktif"])}
+          headers={["Kode", "Nama Produk", "Keterangan", "Status"]}
+          data={data.map(i => [i.kode, i.nama, i.keterangan || "-", i.is_active ? "Aktif" : "Nonaktif"])}
           onClose={() => setIsPrinting(false)}
         />
       )}
+
+      <ImportConfirmModal
+        isOpen={showImportModal}
+        onClose={() => { setShowImportModal(false); setImportData([]); setImportErrors([]); }}
+        onConfirm={async (selectedData) => {
+          setImportLoading(true);
+          const result = await importDataBatch(
+            selectedData,
+            (data) => masterApi.createProduk({
+              kode: data.kode,
+              nama: data.nama,
+              keterangan: data.keterangan === "-" ? null : data.keterangan,
+              is_active: data.is_active === "Ya"
+            })
+          );
+          setImportLoading(false);
+          setShowImportModal(false);
+          setImportData([]);
+          clearMasterDataCache();
+          fetchData();
+          return result;
+        }}
+        onResult={(result) => {
+          setImportResult(result);
+          setShowResultModal(true);
+        }}
+        data={importData}
+        columns={[
+          { key: "kode", label: "Kode" },
+          { key: "nama", label: "Nama" },
+          { key: "keterangan", label: "Keterangan" },
+          { key: "is_active", label: "Status" },
+        ]}
+        title="Konfirmasi Import Produk"
+        loading={importLoading}
+      />
+
+      <ImportResultModal
+        isOpen={showResultModal}
+        onClose={() => setShowResultModal(false)}
+        success={importResult.success}
+        failed={importResult.failed}
+        errors={importResult.errors}
+        title="Hasil Import Produk"
+      />
     </div>
   );
 }

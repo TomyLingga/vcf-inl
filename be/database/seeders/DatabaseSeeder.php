@@ -14,6 +14,6 @@ class DatabaseSeeder extends Seeder
     public function run()
     {
         $this->call(MasterDataSeeder::class);
-        $this->call(SettingSeeder::class);
+        $this->call(SettingsSeeder::class);
     }
 }

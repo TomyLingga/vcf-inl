@@ -85,3 +85,26 @@ export function getNextStage(status: string): string | null {
   };
   return stages[status] ?? null;
 }
+
+/**
+ * Extract error message from API error response.
+ * Shows specific field validation errors instead of generic "The given data was invalid."
+ */
+export function getErrorMessage(err: any, defaultMsg: string = "Terjadi kesalahan."): string {
+  const data = err?.response?.data;
+  
+  // If there are validation errors, show them
+  if (data?.errors && typeof data.errors === "object") {
+    const fieldErrors = Object.entries(data.errors)
+      .map(([field, msgs]) => {
+        const fieldName = field.charAt(0).toUpperCase() + field.slice(1);
+        const messages = Array.isArray(msgs) ? msgs.join(", ") : String(msgs);
+        return `${fieldName}: ${messages}`;
+      })
+      .join("; ");
+    return fieldErrors || defaultMsg;
+  }
+  
+  // Fallback to message or error field
+  return data?.message || data?.error || defaultMsg;
+}

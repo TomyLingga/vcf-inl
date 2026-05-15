@@ -85,19 +85,23 @@ const diagram = `erDiagram
 
   DRIVER {
     int id PK
-    int transporter_id FK
     string nama_supir
     string no_sim
     string jenis_sim
     date tgl_berlaku_sim
     boolean is_active
+    timestamp created_at
+    timestamp updated_at
   }
 
   JENIS_KENDARAAN {
     int id PK
     string nama
     string kode
+    int urutan
     boolean is_active
+    timestamp created_at
+    timestamp updated_at
   }
 
   LOGISTIK {
@@ -105,14 +109,19 @@ const diagram = `erDiagram
     string nama
     string kode
     boolean is_active
+    timestamp created_at
+    timestamp updated_at
   }
 
   PRODUK {
     int id PK
     string nama
+    string keterangan
     string kode
-    string warna_nomor_urut
+    int nomor_urut
     boolean is_active
+    timestamp created_at
+    timestamp updated_at
   }
 
   ITEM_KELENGKAPAN_SUPIR {
@@ -121,6 +130,8 @@ const diagram = `erDiagram
     string keterangan
     int urutan
     boolean is_active
+    timestamp created_at
+    timestamp updated_at
   }
 
   ITEM_MUATAN {
@@ -130,6 +141,8 @@ const diagram = `erDiagram
     string keterangan
     int urutan
     boolean is_active
+    timestamp created_at
+    timestamp updated_at
   }
 
   ITEM_PEMERIKSAAN_MASUK {
@@ -137,10 +150,13 @@ const diagram = `erDiagram
     string nama_item
     string kode
     string tipe_jawaban
+    text pilihan_jawaban
     boolean has_detail
     string keterangan_detail
     int urutan
     boolean is_active
+    timestamp created_at
+    timestamp updated_at
   }
 
   ITEM_PEMERIKSAAN_KELUAR {
@@ -148,10 +164,13 @@ const diagram = `erDiagram
     string nama_item
     string kode
     string tipe_jawaban
+    text pilihan_jawaban
     boolean has_detail
     string keterangan_detail
     int urutan
     boolean is_active
+    timestamp created_at
+    timestamp updated_at
   }
 
   USER {
@@ -168,18 +187,22 @@ const diagram = `erDiagram
     int id PK
     string nomor_urut
     date tanggal
-    int logistik_id FK
-    int produk_id FK
+    string produk
     string tipe_kegiatan
     string asal_tujuan
     int jenis_kendaraan_id FK
     string no_polisi
+    string tipe_kendaraan
+    int tahun_kendaraan
     int transporter_id FK
     int driver_id FK
     time jam_masuk
+    text keterangan
+    string status
+    text catatan
     int created_by FK
     timestamp created_at
-    string status
+    timestamp updated_at
   }
 
   VCF_KELENGKAPAN_SUPIR {
@@ -188,6 +211,8 @@ const diagram = `erDiagram
     int item_id FK
     boolean nilai
     string keterangan
+    timestamp created_at
+    timestamp updated_at
   }
 
   VCF_MUATAN_DIBAWA {
@@ -196,6 +221,8 @@ const diagram = `erDiagram
     int item_muatan_id FK
     string nilai
     string keterangan
+    timestamp created_at
+    timestamp updated_at
   }
 
   VCF_MUATAN_DIISI {
@@ -204,6 +231,8 @@ const diagram = `erDiagram
     int item_muatan_id FK
     string nilai
     string keterangan
+    timestamp created_at
+    timestamp updated_at
   }
 
   VCF_PEMERIKSAAN_MASUK {
@@ -214,19 +243,26 @@ const diagram = `erDiagram
     string keterangan
     int petugas_id FK
     timestamp waktu_input
+    timestamp created_at
+    timestamp updated_at
   }
 
   VCF_BEBAN_TAMBAHAN_MASUK {
     int id PK
     int vcf_id FK
     string jenis_beban
+    timestamp created_at
+    timestamp updated_at
   }
 
   VCF_SEGEL_MASUK {
     int id PK
     int vcf_id FK
     int jumlah_segel
+    text keterangan
     int petugas_id FK
+    timestamp created_at
+    timestamp updated_at
   }
 
   VCF_NOMOR_SEGEL_MASUK {
@@ -234,6 +270,8 @@ const diagram = `erDiagram
     int segel_masuk_id FK
     int urutan
     string nomor_segel
+    timestamp created_at
+    timestamp updated_at
   }
 
   VCF_PEMERIKSAAN_KELUAR {
@@ -244,19 +282,26 @@ const diagram = `erDiagram
     string keterangan
     int petugas_id FK
     timestamp waktu_input
+    timestamp created_at
+    timestamp updated_at
   }
 
   VCF_BEBAN_TAMBAHAN_KELUAR {
     int id PK
     int vcf_id FK
     string jenis_beban
+    timestamp created_at
+    timestamp updated_at
   }
 
   VCF_SEGEL_KELUAR {
     int id PK
     int vcf_id FK
     int jumlah_segel
+    text keterangan
     int petugas_id FK
+    timestamp created_at
+    timestamp updated_at
   }
 
   VCF_NOMOR_SEGEL_KELUAR {
@@ -264,6 +309,8 @@ const diagram = `erDiagram
     int segel_keluar_id FK
     int urutan
     string nomor_segel
+    timestamp created_at
+    timestamp updated_at
   }
 
   VCF_KELUAR {
@@ -271,16 +318,32 @@ const diagram = `erDiagram
     int vcf_id FK
     time jam_keluar
     string emergency_respon_kontak
+    text keterangan
     int petugas_id FK
     timestamp waktu_input
+    timestamp created_at
+    timestamp updated_at
+  }
+
+  SETTINGS {
+    int id PK
+    string key UK
+    text value
+    string type
+    string group
+    string label
+    text description
+    boolean is_active
+    timestamp created_at
+    timestamp updated_at
   }
 
   TRANSPORTER ||--o{ DRIVER : memiliki
   TRANSPORTER ||--o{ VCF : digunakan_di
   DRIVER ||--o{ VCF : mengemudikan
-  LOGISTIK ||--o{ VCF : dikategorikan
-  PRODUK ||--o{ VCF : berkaitan
   JENIS_KENDARAAN ||--o{ VCF : mengklasifikasi
+  LOGISTIK ||--o{ VCF : terkait
+  PRODUK ||--o{ VCF : digunakan
   USER ||--o{ VCF : membuat
 
   VCF ||--o{ VCF_KELENGKAPAN_SUPIR : memiliki

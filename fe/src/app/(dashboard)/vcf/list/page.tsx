@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useSearchParams, useRouter } from "next/navigation";
 import { vcfApi } from "@/lib/api";
 import { isAdmin } from "@/lib/auth";
-import { getStatusLabel, getStatusColor } from "@/lib/utils";
+import { getStatusLabel, getStatusColor, getErrorMessage } from "@/lib/utils";
 import { exportToExcel } from "@/lib/exportUtils";
 import PrintVCF from "../[id]/PrintVCF";
 import PrintMasterTable from "@/components/print/PrintMasterTable";
@@ -107,7 +107,7 @@ export default function VcfListPage() {
       setRejectReason("");
       fetchVcfs();
     } catch (err: any) {
-      alert(err.response?.data?.message || "Gagal menolak VCF.");
+      alert(getErrorMessage(err, "Gagal menolak VCF."));
     } finally {
       setRejectLoading(false);
     }

@@ -110,14 +110,14 @@ class SettingController extends Controller
         $validated = $request->validate([
             'settings' => 'required|array',
             'settings.*.key' => 'required|string|exists:settings,key',
-            'settings.*.value' => 'required',
+            'settings.*.value' => 'nullable',
         ]);
 
         $updated = [];
         foreach ($validated['settings'] as $item) {
             $setting = Setting::where('key', $item['key'])->first();
             if ($setting) {
-                $setting->value = $this->prepareValue($item['value'], $setting->type);
+                $setting->value = $this->prepareValue($item['value'] ?? '', $setting->type);
                 $setting->save();
                 $updated[] = $setting->key;
             }
@@ -137,16 +137,18 @@ class SettingController extends Controller
         $setting = Setting::where('key', $key)->firstOrFail();
 
         $validated = $request->validate([
-            'value' => 'required',
+            'value' => 'nullable',
             'is_active' => 'boolean',
         ]);
 
-        if (isset($validated['value'])) {
-            $setting->value = $this->prepareValue($validated['value'], $setting->type);
-        }
-        
-        if (isset($validated['is_active'])) {
+        // Preserve is_active if not provided in request
+        if (array_key_exists('is_active', $validated)) {
             $setting->is_active = $validated['is_active'];
+        }
+
+        // Always update value (even if null/empty) as long as the key exists in request
+        if ($request->has('value')) {
+            $setting->value = $this->prepareValue($validated['value'] ?? '', $setting->type);
         }
 
         $setting->save();

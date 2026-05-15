@@ -28,6 +28,7 @@ class VcfBagian4Controller extends Controller
         $validated = $request->validate([
             'jam_keluar'               => 'required|date_format:H:i',
             'emergency_respon_kontak'  => 'nullable|string|max:500',
+            'keterangan'               => 'nullable|string',
         ]);
 
         DB::beginTransaction();
@@ -36,6 +37,7 @@ class VcfBagian4Controller extends Controller
                 'vcf_id'                  => $vcf->id,
                 'jam_keluar'              => $validated['jam_keluar'],
                 'emergency_respon_kontak' => $validated['emergency_respon_kontak'] ?? null,
+                'keterangan'              => $validated['keterangan'] ?? null,
                 'petugas_id'              => $request->user()->id,
                 'waktu_input'             => now(),
             ]);
@@ -110,6 +112,7 @@ class VcfBagian4Controller extends Controller
         $validated = $request->validate([
             'jam_keluar'              => 'sometimes|required|date_format:H:i',
             'emergency_respon_kontak' => 'nullable|string|max:500',
+            'keterangan'              => 'nullable|string',
         ]);
 
         $keluar->update($validated);

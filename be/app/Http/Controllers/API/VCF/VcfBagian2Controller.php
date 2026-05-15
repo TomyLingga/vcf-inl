@@ -55,6 +55,9 @@ class VcfBagian2Controller extends Controller
             'jumlah_segel'                      => 'required_if:segel_terpasang,true|nullable|integer|min:1|max:100',
             'nomor_segel'                       => 'required_if:segel_terpasang,true|nullable|array',
             'nomor_segel.*'                     => 'required|string|max:100',
+
+            // Keterangan umum (opsional)
+            'keterangan'                        => 'nullable|string|max:1000',
         ]);
 
         // Pastikan jumlah elemen nomor_segel sesuai jumlah_segel
@@ -89,12 +92,13 @@ class VcfBagian2Controller extends Controller
                 ]);
             }
 
-            // Simpan segel
+            // Simpan segel (selalu buat record untuk menyimpan keterangan umum)
             if ($validated['segel_terpasang']) {
                 $segel = VcfSegelMasuk::create([
                     'vcf_id'        => $vcf->id,
                     'jumlah_segel'  => $validated['jumlah_segel'],
                     'petugas_id'    => $request->user()->id,
+                    'keterangan'    => $validated['keterangan'] ?? null,
                 ]);
 
                 foreach ($validated['nomor_segel'] as $urutan => $nomor) {
@@ -104,6 +108,14 @@ class VcfBagian2Controller extends Controller
                         'nomor_segel'    => $nomor,
                     ]);
                 }
+            } else {
+                // Jika segel tidak terpasang, tetap buat record untuk menyimpan keterangan umum
+                $segel = VcfSegelMasuk::create([
+                    'vcf_id'        => $vcf->id,
+                    'jumlah_segel'  => 0,
+                    'petugas_id'    => $request->user()->id,
+                    'keterangan'    => $validated['keterangan'] ?? null,
+                ]);
             }
 
             // Update status VCF
@@ -156,19 +168,21 @@ class VcfBagian2Controller extends Controller
     }
 
     /**
-     * Update Bagian 2 — hanya jika status 'bagian2_selesai'.
+     * Update Bagian 2 — hanya jika status 'bagian2_selesai' atau user adalah admin.
      */
     public function update(Request $request, int $vcfId)
     {
         $vcf = Vcf::findOrFail($vcfId);
 
-        if (in_array($vcf->status, ['selesai', 'reject'])) {
+        // Only admin can edit VCF at any stage. Petugas cannot edit if status is selesai/reject.
+        if (in_array($vcf->status, ['selesai', 'reject']) && !$this->isAdmin()) {
             return response()->json([
-                'message' => 'Bagian 2 tidak dapat diedit karena VCF sudah final/ditolak. Status VCF: ' . $vcf->status,
+                'message' => 'Bagian 2 tidak dapat diedit karena VCF sudah final/ditolak. Hanya admin yang dapat mengedit.',
             ], 422);
         }
 
-        if (!in_array($vcf->status, self::EDITABLE_STATUSES)) {
+        // Non-admin users can only edit if status is in editable statuses
+        if (!$this->isAdmin() && !in_array($vcf->status, self::EDITABLE_STATUSES)) {
             return response()->json([
                 'message' => 'Bagian 2 tidak dapat diedit. Status VCF: ' . $vcf->status,
             ], 422);
@@ -187,6 +201,8 @@ class VcfBagian2Controller extends Controller
             'jumlah_segel'                      => 'nullable|integer|min:1|max:100',
             'nomor_segel'                       => 'nullable|array',
             'nomor_segel.*'                     => 'required|string|max:100',
+
+            'keterangan'                        => 'nullable|string|max:1000',
         ]);
 
         DB::beginTransaction();
@@ -232,6 +248,7 @@ class VcfBagian2Controller extends Controller
                         'vcf_id'       => $vcf->id,
                         'jumlah_segel' => $validated['jumlah_segel'],
                         'petugas_id'   => $request->user()->id,
+                        'keterangan'   => $validated['keterangan'] ?? null,
                     ]);
 
                     foreach ($validated['nomor_segel'] as $urutan => $nomor) {
@@ -241,6 +258,14 @@ class VcfBagian2Controller extends Controller
                             'nomor_segel'    => $nomor,
                         ]);
                     }
+                } else {
+                    // Jika segel tidak terpasang, tetap buat record untuk menyimpan keterangan umum
+                    $segel = VcfSegelMasuk::create([
+                        'vcf_id'       => $vcf->id,
+                        'jumlah_segel' => 0,
+                        'petugas_id'   => $request->user()->id,
+                        'keterangan'   => $validated['keterangan'] ?? null,
+                    ]);
                 }
             }
 

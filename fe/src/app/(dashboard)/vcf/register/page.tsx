@@ -4,9 +4,11 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { vcfApi } from "@/lib/api";
 import { fetchAndCacheMasterData, getCachedMasterData } from "@/lib/masterDataCache";
-import { formatTime, formatDate, isValidTime24h } from "@/lib/utils";
+import { formatTime, formatDate, isValidTime24h, getErrorMessage } from "@/lib/utils";
 import { getUser } from "@/lib/auth";
 import { generateQRSignature } from "@/lib/qrUtils";
+import GuideSection from "@/components/GuideSection";
+import SearchableDropdown from "@/components/SearchableDropdown";
 
 interface SelectOption { id: number; nama?: string; nama_transporter?: string; nama_supir?: string; nama_item?: string; kode?: string; no_sim?: string; tgl_berlaku_sim?: string; jenis_sim?: string; is_active?: boolean | number | string; }
 interface ChecklistItem { id: number; nama_item: string; urutan: number; is_active?: boolean | number | string; }
@@ -35,12 +37,12 @@ function ValidationSummary({ errors, onDismiss }: { errors: ValidationEntry[]; o
       <div className="flex items-center justify-between px-5 py-3 border-b border-amber-400/20">
         <div className="flex items-center gap-2">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="text-amber-500 shrink-0">
-            <path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>
+            <path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z" /><line x1="12" y1="9" x2="12" y2="13" /><line x1="12" y1="17" x2="12.01" y2="17" />
           </svg>
           <span className="text-sm font-bold text-amber-700 dark:text-amber-400">{errors.length} field belum lengkap</span>
         </div>
         <button onClick={onDismiss} className="text-amber-500 hover:text-amber-700 transition-colors p-1 rounded-lg hover:bg-amber-100 dark:hover:bg-amber-900/30">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M18 6 6 18M6 6l12 12"/></svg>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M18 6 6 18M6 6l12 12" /></svg>
         </button>
       </div>
       <div className="px-5 py-3 space-y-2">
@@ -56,7 +58,7 @@ function ValidationSummary({ errors, onDismiss }: { errors: ValidationEntry[]; o
                   className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-medium bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300 hover:bg-amber-200 dark:hover:bg-amber-900/50 transition-colors border border-amber-300/40"
                 >
                   {e.label}
-                  <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+                  <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M5 12h14M12 5l7 7-7 7" /></svg>
                 </button>
               ))}
             </div>
@@ -95,10 +97,11 @@ export default function VcfRegisterPage() {
   const [validationErrors, setValidationErrors] = useState<ValidationEntry[]>([]);
   const [masterLoading, setMasterLoading] = useState(true);
   const [masterProgress, setMasterProgress] = useState(0);
-  
+  const [showGuide, setShowGuide] = useState(false);
+
   // Settings
   const [showProdukLainnya, setShowProdukLainnya] = useState(true);
-  const [produkOptions, setProdukOptions] = useState<{kode: string; label: string}[]>([]);
+  const [produkOptions, setProdukOptions] = useState<{ kode: string; label: string }[]>([]);
 
   // Master data
   const [transporters, setTransporters] = useState<SelectOption[]>([]);
@@ -255,22 +258,28 @@ export default function VcfRegisterPage() {
 
     const produkStr = produkKode === "OTHERS" ? `OTHERS: ${produkLainnya.trim()}` : produkKode;
 
-    const buildMuatanPayload = (src: Record<number, { checked: boolean; nilai: string }>) => {
-      return Object.entries(src)
+    const buildMuatanPayload = (src: Record<number, { checked: boolean; nilai: string }>, lainnya: { checked: boolean; nilai: string }) => {
+      const payload: Array<{ item_muatan_id: number | null; nilai: string; keterangan: string }> = Object.entries(src)
         .filter(([, v]) => v.checked)
         .map(([id, v]) => ({
           item_muatan_id: parseInt(id, 10),
           nilai: v.nilai?.trim() ? v.nilai.trim() : "1",
           keterangan: "-",
         }));
+
+      // Add lainnya if checked - send without item_muatan_id (null)
+      if (lainnya.checked && lainnya.nilai?.trim()) {
+        payload.push({
+          item_muatan_id: null,
+          nilai: lainnya.nilai.trim(),
+          keterangan: "-",
+        });
+      }
+
+      return payload;
     };
 
-    const lainnyaNotes: string[] = [];
-    if (isUnloading && muatanDibawaLainnya.checked && muatanDibawaLainnya.nilai.trim())
-      lainnyaNotes.push(`Muatan Lainnya (Dibawa): ${muatanDibawaLainnya.nilai.trim()}`);
-    if (isLoading && muatanDiisiLainnya.checked && muatanDiisiLainnya.nilai.trim())
-      lainnyaNotes.push(`Muatan Lainnya (Diisi): ${muatanDiisiLainnya.nilai.trim()}`);
-    const keteranganFinal = [keterangan.trim(), ...lainnyaNotes].filter(Boolean).join(" | ") || "-";
+    const keteranganFinal = keterangan.trim() || "-";
 
     setLoading(true);
     try {
@@ -290,8 +299,8 @@ export default function VcfRegisterPage() {
         driver_id: parseInt(driverId),
         jam_masuk: jamMasuk,
         kelengkapan_supir: kelengkapanSupir,
-        muatan_dibawa: isUnloading ? buildMuatanPayload(muatanDibawa) : [],
-        muatan_diisi: isLoading ? buildMuatanPayload(muatanDiisi) : [],
+        muatan_dibawa: isUnloading ? buildMuatanPayload(muatanDibawa, muatanDibawaLainnya) : [],
+        muatan_diisi: isLoading ? buildMuatanPayload(muatanDiisi, muatanDiisiLainnya) : [],
         keterangan: keteranganFinal,
         qr_signature: qrSignature,
       };
@@ -305,8 +314,7 @@ export default function VcfRegisterPage() {
         router.push("/dashboard");
       }
     } catch (err: any) {
-      const msg = err.response?.data?.message || err.response?.data?.error || "Gagal menyimpan VCF.";
-      setError(msg);
+      setError(getErrorMessage(err, "Gagal menyimpan VCF."));
     } finally {
       setLoading(false);
     }
@@ -339,10 +347,31 @@ export default function VcfRegisterPage() {
 
   return (
     <div className="max-w-5xl mx-auto pb-8">
-      <div className="mb-8">
-        <h1 className="page-title text-3xl mb-1">Registrasi VCF</h1>
-        <p className="page-subtitle text-lg">Pendaftaran Kendaraan Masuk (Main Gate)</p>
+      <div className="mb-8 flex flex-col md:flex-row md:items-end justify-between gap-4">
+        <div>
+          <h1 className="page-title text-3xl mb-1">Registrasi VCF</h1>
+          <p className="page-subtitle text-lg">Pendaftaran Kendaraan Masuk (Main Gate)</p>
+        </div>
+        <button
+          type="button"
+          onClick={() => setShowGuide(!showGuide)}
+          className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all border ${showGuide
+            ? "bg-blue-500/10 text-blue-500 border-blue-500/30"
+            : "bg-bg-secondary text-text-muted border-border hover:border-blue-500/30"
+            }`}
+        >
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+            <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z" /><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z" />
+          </svg>
+          <span>{showGuide ? "Tutup Panduan" : "Panduan Operasional"}</span>
+        </button>
       </div>
+
+      {showGuide && (
+        <div className="mb-8 animate-in fade-in slide-in-from-top-4 duration-300">
+          <GuideSection />
+        </div>
+      )}
 
       <ValidationSummary errors={validationErrors} onDismiss={() => setValidationErrors([])} />
 
@@ -452,7 +481,7 @@ export default function VcfRegisterPage() {
             <div id="field-produk">
               <label className="form-label mb-3">Produk *</label>
               <div className="flex flex-wrap gap-2">
-                {produkOptions.map((p: {kode: string; label: string}) => (
+                {produkOptions.map((p: { kode: string; label: string }) => (
                   <button
                     key={p.kode} type="button"
                     onClick={() => setProdukKode(p.kode)}
@@ -480,179 +509,187 @@ export default function VcfRegisterPage() {
         {masterLoading ? (
           <SectionSkeleton title="Kendaraan & Personel" />
         ) : (
-        <div className="glass-card p-8 shadow-sm">
-          <div className="flex items-center gap-3 mb-8">
-            <div className="w-10 h-10 rounded-xl bg-amber-500/10 text-amber-600 flex items-center justify-center">
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="1" y="3" width="15" height="13" rx="1" /><path d="M16 8h4l3 3v5h-7V8z" /><circle cx="5.5" cy="18.5" r="2.5" /><circle cx="18.5" cy="18.5" r="2.5" /></svg>
+          <div className="glass-card p-8 shadow-sm">
+            <div className="flex items-center gap-3 mb-8">
+              <div className="w-10 h-10 rounded-xl bg-amber-500/10 text-amber-600 flex items-center justify-center">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="1" y="3" width="15" height="13" rx="1" /><path d="M16 8h4l3 3v5h-7V8z" /><circle cx="5.5" cy="18.5" r="2.5" /><circle cx="18.5" cy="18.5" r="2.5" /></svg>
+              </div>
+              <h2 className="text-xl font-bold text-text-primary">Kendaraan & Personel</h2>
             </div>
-            <h2 className="text-xl font-bold text-text-primary">Kendaraan & Personel</h2>
-          </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div className="space-y-4">
-              <div id="field-transporter">
-                <label className="form-label">Nama Transporter *</label>
-                <select className="form-select" value={transporterId} onChange={e => setTransporterId(e.target.value)} required>
-                  <option value="">Pilih Transporter</option>
-                  {transporters.map(t => <option key={t.id} value={t.id}>{t.nama_transporter}</option>)}
-                </select>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="space-y-4">
+                <div id="field-transporter">
+                  <SearchableDropdown
+                    label="Nama Transporter"
+                    options={transporters}
+                    value={transporterId}
+                    onChange={setTransporterId}
+                    placeholder="Pilih Transporter"
+                    required
+                    displayField="nama_transporter"
+                  />
+                </div>
+                <div id="field-no-polisi">
+                  <label className="form-label">No. Polisi *</label>
+                  <input type="text" className="form-input uppercase" placeholder="BK 1234 ABC" value={noPolisi} onChange={e => setNoPolisi(e.target.value)} required />
+                </div>
+                <div id="field-jenis-kendaraan">
+                  <label className="form-label">Jenis Kendaraan *</label>
+                  <select
+                    className="form-select uppercase"
+                    value={tipeKendaraan}
+                    onChange={e => {
+                      const val = e.target.value;
+                      setTipeKendaraan(val as any);
+                      // Find matching jenis_kendaraan_id from master data by name/kode
+                      const match = jenisKendaraan.find(j =>
+                        j.nama?.toLowerCase().includes(val.toLowerCase()) ||
+                        j.kode?.toLowerCase().includes(val.toLowerCase())
+                      );
+                      if (match) {
+                        setJenisKendaraanId(String(match.id));
+                      } else if (jenisKendaraan.length > 0) {
+                        // Fallback to first one if no match found (to satisfy backend requirement)
+                        setJenisKendaraanId(String(jenisKendaraan[0].id));
+                      }
+                    }}
+                    required
+                  >
+                    <option value="">Pilih Jenis</option>
+                    {[
+                      { val: "bak_terbuka", label: "Bak Terbuka" },
+                      { val: "tangki", label: "Tangki" },
+                      { val: "umum", label: "Umum" },
+                      { val: "box", label: "Box" },
+                      { val: "container", label: "Container" }
+                    ].map(t => (
+                      <option key={t.val} value={t.val}>{t.label}</option>
+                    ))}
+                  </select>
+                </div>
               </div>
-              <div id="field-no-polisi">
-                <label className="form-label">No. Polisi *</label>
-                <input type="text" className="form-input uppercase" placeholder="BK 1234 ABC" value={noPolisi} onChange={e => setNoPolisi(e.target.value)} required />
+              <div className="space-y-4">
+                <div id="field-driver">
+                  <SearchableDropdown
+                    label="Nama Supir"
+                    options={drivers}
+                    value={driverId}
+                    onChange={setDriverId}
+                    placeholder="Pilih Supir"
+                    required
+                    displayField="nama_supir"
+                  />
+                </div>
+                <div>
+                  <label className="form-label">No. SIM</label>
+                  <input type="text" className="form-input bg-slate-50 dark:bg-white/5" value={allDrivers.find(d => String(d.id) === driverId)?.no_sim || ""} readOnly placeholder="Terisi otomatis" />
+                </div>
+                <div>
+                  <label className="form-label">Berlaku SIM</label>
+                  <input
+                    type="text"
+                    className="form-input bg-slate-50 dark:bg-white/5"
+                    value={(() => {
+                      const d = allDrivers.find(d => String(d.id) === driverId);
+                      return d?.tgl_berlaku_sim ? d.tgl_berlaku_sim.split('T')[0] : "";
+                    })()}
+                    readOnly
+                    placeholder="Terisi otomatis"
+                  />
+                </div>
+
               </div>
-              <div id="field-jenis-kendaraan">
-                <label className="form-label">Jenis Kendaraan *</label>
-                <select 
-                  className="form-select uppercase" 
-                  value={tipeKendaraan} 
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
+              <div id="field-tahun-kendaraan" data-field-error={fieldErrors.tahunKendaraan ? "true" : undefined}>
+                <label className="form-label">Tahun Kendaraan</label>
+                <input
+                  type="number"
+                  className={`form-input ${fieldErrors.tahunKendaraan ? 'border-red-500 bg-red-50 dark:bg-red-500/10' : ''}`}
+                  placeholder="Contoh: 2022"
+                  value={tahunKendaraan}
                   onChange={e => {
-                    const val = e.target.value;
-                    setTipeKendaraan(val as any);
-                    // Find matching jenis_kendaraan_id from master data by name/kode
-                    const match = jenisKendaraan.find(j => 
-                      j.nama?.toLowerCase().includes(val.toLowerCase()) || 
-                      j.kode?.toLowerCase().includes(val.toLowerCase())
-                    );
-                    if (match) {
-                      setJenisKendaraanId(String(match.id));
-                    } else if (jenisKendaraan.length > 0) {
-                      // Fallback to first one if no match found (to satisfy backend requirement)
-                      setJenisKendaraanId(String(jenisKendaraan[0].id));
+                    setTahunKendaraan(e.target.value);
+                    if (fieldErrors.tahunKendaraan) {
+                      setFieldErrors(prev => ({ ...prev, tahunKendaraan: false }));
                     }
-                  }} 
-                  required
-                >
-                  <option value="">Pilih Jenis</option>
-                  {[
-                    { val: "bak_terbuka", label: "Bak Terbuka" },
-                    { val: "tangki", label: "Tangki" },
-                    { val: "umum", label: "Umum" },
-                    { val: "box", label: "Box" },
-                    { val: "container", label: "Container" }
-                  ].map(t => (
-                    <option key={t.val} value={t.val}>{t.label}</option>
-                  ))}
-                </select>
-              </div>
-            </div>
-            <div className="space-y-4">
-              <div id="field-driver">
-                <label className="form-label">Nama Supir *</label>
-                <select className="form-select" value={driverId} onChange={e => setDriverId(e.target.value)} required>
-                  <option value="">Pilih Supir</option>
-                  {drivers.map(d => <option key={d.id} value={d.id}>{d.nama_supir}</option>)}
-                </select>
-              </div>
-              <div>
-                <label className="form-label">No. SIM</label>
-                <input type="text" className="form-input bg-slate-50 dark:bg-white/5" value={allDrivers.find(d => String(d.id) === driverId)?.no_sim || ""} readOnly placeholder="Terisi otomatis" />
-              </div>
-              <div>
-                <label className="form-label">Berlaku SIM</label>
-                <input 
-                  type="text" 
-                  className="form-input bg-slate-50 dark:bg-white/5" 
-                  value={(() => {
-                    const d = allDrivers.find(d => String(d.id) === driverId);
-                    return d?.tgl_berlaku_sim ? d.tgl_berlaku_sim.split('T')[0] : "";
-                  })()} 
-                  readOnly 
-                  placeholder="Terisi otomatis" 
+                  }}
                 />
+                {fieldErrors.tahunKendaraan && (
+                  <p className="text-[11px] text-red-500 mt-1">Tahun tidak boleh lebih dari {new Date().getFullYear()}</p>
+                )}
               </div>
-
+              <div>
+                <label className="form-label">Tujuan</label>
+                <input type="text" className="form-input" placeholder="Masukkan tujuan" value={tujuan} onChange={e => setTujuan(e.target.value)} />
+              </div>
             </div>
           </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
-            <div id="field-tahun-kendaraan" data-field-error={fieldErrors.tahunKendaraan ? "true" : undefined}>
-              <label className="form-label">Tahun Kendaraan</label>
-              <input 
-                type="number" 
-                className={`form-input ${fieldErrors.tahunKendaraan ? 'border-red-500 bg-red-50 dark:bg-red-500/10' : ''}`} 
-                placeholder="Contoh: 2022" 
-                value={tahunKendaraan} 
-                onChange={e => {
-                  setTahunKendaraan(e.target.value);
-                  if (fieldErrors.tahunKendaraan) {
-                    setFieldErrors(prev => ({ ...prev, tahunKendaraan: false }));
-                  }
-                }} 
-              />
-              {fieldErrors.tahunKendaraan && (
-                <p className="text-[11px] text-red-500 mt-1">Tahun tidak boleh lebih dari {new Date().getFullYear()}</p>
-              )}
-            </div>
-            <div>
-              <label className="form-label">Tujuan</label>
-              <input type="text" className="form-input" placeholder="Masukkan tujuan" value={tujuan} onChange={e => setTujuan(e.target.value)} />
-            </div>
-          </div>
-        </div>
         )}
 
         {/* SECTION 3: PEMERIKSAAN KELENGKAPAN */}
         {masterLoading ? (
           <SectionSkeleton title="Pemeriksaan Kelengkapan Supir" />
         ) : (
-        <div id="field-checklist" className="glass-card p-8 shadow-sm">
-          <div className="flex items-center gap-3 mb-8">
-            <div className="w-10 h-10 rounded-xl bg-purple-500/10 text-purple-600 flex items-center justify-center">
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" /><polyline points="22 4 12 14.01 9 11.01" /></svg>
+          <div id="field-checklist" className="glass-card p-8 shadow-sm">
+            <div className="flex items-center gap-3 mb-8">
+              <div className="w-10 h-10 rounded-xl bg-purple-500/10 text-purple-600 flex items-center justify-center">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" /><polyline points="22 4 12 14.01 9 11.01" /></svg>
+              </div>
+              <div className="flex-1">
+                <h2 className="text-xl font-bold text-text-primary">Pemeriksaan Kelengkapan Supir</h2>
+                <p className="text-sm text-text-muted">Wajib diisi semua item (Ya/Tidak).</p>
+              </div>
+              <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">
+                {Object.values(checklist).filter((v) => v !== null).length}/{checklistItems.length} terisi
+              </span>
             </div>
-            <div className="flex-1">
-              <h2 className="text-xl font-bold text-text-primary">Pemeriksaan Kelengkapan Supir</h2>
-              <p className="text-sm text-text-muted">Wajib diisi semua item (Ya/Tidak).</p>
-            </div>
-            <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">
-              {Object.values(checklist).filter((v) => v !== null).length}/{checklistItems.length} terisi
-            </span>
-          </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-            {checklistItems.map((item) => {
-              const val = checklist[item.id];
-              return (
-                <div
-                  key={item.id}
-                  className="p-4 rounded-2xl border transition-all"
-                  style={{
-                    background: val === true ? "rgba(16,185,129,0.06)" : val === false ? "rgba(239,68,68,0.06)" : "rgba(255,255,255,0.02)",
-                    borderColor: val === true ? "rgba(16,185,129,0.25)" : val === false ? "rgba(239,68,68,0.25)" : "var(--border)",
-                  }}
-                >
-                  <div className="flex items-center justify-between gap-3">
-                    <div className="min-w-0">
-                      <p className="text-sm font-bold text-text-primary dark:text-slate-200 truncate">
-                        {item.nama_item}
-                      </p>
-                      <p className="text-[11px]" style={{ color: "var(--text-muted)" }}>
-                        Status: <span className="font-semibold">{val === null ? "Belum dipilih" : val ? "Ya" : "Tidak"}</span>
-                      </p>
-                    </div>
-                    <div className="flex gap-2 flex-shrink-0">
-                      <button
-                        type="button"
-                        onClick={() => setChecklist((p) => ({ ...p, [item.id]: true }))}
-                        className={`px-4 py-2 rounded-xl text-xs font-black uppercase tracking-wider border transition-all ${val === true ? "bg-emerald-500 border-emerald-500 text-white" : "bg-white/0 border-border text-slate-500 hover:border-emerald-500/50"}`}
-                      >
-                        Ya
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setChecklist((p) => ({ ...p, [item.id]: false }))}
-                        className={`px-4 py-2 rounded-xl text-xs font-black uppercase tracking-wider border transition-all ${val === false ? "bg-rose-500 border-rose-500 text-white" : "bg-white/0 border-border text-slate-500 hover:border-rose-500/50"}`}
-                      >
-                        Tidak
-                      </button>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              {checklistItems.map((item) => {
+                const val = checklist[item.id];
+                return (
+                  <div
+                    key={item.id}
+                    className="p-4 rounded-2xl border transition-all"
+                    style={{
+                      background: val === true ? "rgba(16,185,129,0.06)" : val === false ? "rgba(239,68,68,0.06)" : "rgba(255,255,255,0.02)",
+                      borderColor: val === true ? "rgba(16,185,129,0.25)" : val === false ? "rgba(239,68,68,0.25)" : "var(--border)",
+                    }}
+                  >
+                    <div className="flex items-center justify-between gap-3">
+                      <div className="min-w-0">
+                        <p className="text-sm font-bold text-text-primary dark:text-slate-200 truncate">
+                          {item.nama_item}
+                        </p>
+                        <p className="text-[11px]" style={{ color: "var(--text-muted)" }}>
+                          Status: <span className="font-semibold">{val === null ? "Belum dipilih" : val ? "Ya" : "Tidak"}</span>
+                        </p>
+                      </div>
+                      <div className="flex gap-2 flex-shrink-0">
+                        <button
+                          type="button"
+                          onClick={() => setChecklist((p) => ({ ...p, [item.id]: true }))}
+                          className={`px-4 py-2 rounded-xl text-xs font-black uppercase tracking-wider border transition-all ${val === true ? "bg-emerald-500 border-emerald-500 text-white" : "bg-white/0 border-border text-slate-500 hover:border-emerald-500/50"}`}
+                        >
+                          Ya
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setChecklist((p) => ({ ...p, [item.id]: false }))}
+                          className={`px-4 py-2 rounded-xl text-xs font-black uppercase tracking-wider border transition-all ${val === false ? "bg-rose-500 border-rose-500 text-white" : "bg-white/0 border-border text-slate-500 hover:border-rose-500/50"}`}
+                        >
+                          Tidak
+                        </button>
+                      </div>
                     </div>
                   </div>
-                </div>
-              );
-            })}
+                );
+              })}
+            </div>
           </div>
-        </div>
         )}
 
         {/* SECTION 4: MUATAN - only show when tipe kegiatan selected */}
@@ -660,116 +697,102 @@ export default function VcfRegisterPage() {
           <div className="glass-card p-6 shadow-sm border-2 border-dashed border-slate-200 dark:border-white/10">
             <div className="flex items-center gap-3 text-text-muted">
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+                <circle cx="12" cy="12" r="10" /><line x1="12" y1="8" x2="12" y2="12" /><line x1="12" y1="16" x2="12.01" y2="16" />
               </svg>
               <p className="text-sm font-medium">Pilih <strong>Tipe Kegiatan</strong> (Loading/Unloading) terlebih dahulu untuk melihat detail muatan.</p>
             </div>
           </div>
         ) : (
-        <div className="glass-card p-8 shadow-sm">
-          <div className="flex items-center gap-3 mb-8">
-            <div className="w-10 h-10 rounded-xl bg-emerald-500/10 text-emerald-600 flex items-center justify-center">
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z" /><polyline points="3.27 6.96 12 12.01 20.73 6.96" /><line x1="12" y1="22.08" x2="12" y2="12" /></svg>
+          <div className="glass-card p-8 shadow-sm">
+            <div className="flex items-center gap-3 mb-8">
+              <div className="w-10 h-10 rounded-xl bg-emerald-500/10 text-emerald-600 flex items-center justify-center">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z" /><polyline points="3.27 6.96 12 12.01 20.73 6.96" /><line x1="12" y1="22.08" x2="12" y2="12" /></svg>
+              </div>
+              <h2 className="text-xl font-bold text-text-primary">Jenis & Detail Muatan</h2>
             </div>
-            <h2 className="text-xl font-bold text-text-primary">Jenis & Detail Muatan</h2>
-          </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
-            {/* Muatan Dibawa - Only shown for UNLOADING */}
-            {isUnloading && (
-              <div>
-                <h3 className="text-sm font-bold uppercase tracking-wider text-slate-400 mb-4">Muatan yang Dibawa</h3>
-                <div className="space-y-3">
-                  {muatanItems.filter(m => m.jenis === 'dibawa' || m.jenis === 'both').map(m => (
-                    <div key={m.id} className="p-4 rounded-xl border border-slate-100 dark:border-white/5 bg-slate-50/30 dark:bg-white/5">
-                      <div className="flex items-center justify-between">
-                        <span className="font-bold text-text-primary dark:text-slate-300 text-sm">{m.nama_item}</span>
-                        <div className="flex gap-2">
-                          <button type="button" onClick={() => {
-                            const reset: Record<number, { checked: boolean; nilai: string }> = {};
-                            muatanItems.filter(x => x.jenis === 'dibawa' || x.jenis === 'both').forEach(x => { reset[x.id] = { checked: true, nilai: "0" }; });
-                            reset[m.id] = { checked: true, nilai: "1" };
-                            setMuatanDibawa(p => ({ ...p, ...reset }));
-                            setMuatanDibawaLainnya({ checked: true, nilai: "0" });
-                          }} className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all ${muatanDibawa[m.id]?.checked && muatanDibawa[m.id]?.nilai !== "0" ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-200' : 'bg-bg-secondary dark:bg-white/10 text-text-muted border border-slate-100 dark:border-white/10'}`}>Ya</button>
-                          <button type="button" onClick={() => setMuatanDibawa(p => ({ ...p, [m.id]: { checked: true, nilai: "0" } }))} className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all ${muatanDibawa[m.id]?.checked && muatanDibawa[m.id]?.nilai === "0" ? 'bg-rose-500 text-white shadow-lg shadow-rose-200' : 'bg-bg-secondary dark:bg-white/10 text-text-muted border border-slate-100 dark:border-white/10'}`}>Tidak</button>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
+              {/* Muatan Dibawa - Only shown for UNLOADING */}
+              {isUnloading && (
+                <div>
+                  <h3 className="text-sm font-bold uppercase tracking-wider text-slate-400 mb-4">Muatan yang Dibawa</h3>
+                  <div className="space-y-3">
+                    {muatanItems.filter(m => m.jenis === 'dibawa' || m.jenis === 'both').map(m => (
+                      <div key={m.id} className="p-4 rounded-xl border border-slate-100 dark:border-white/5 bg-slate-50/30 dark:bg-white/5">
+                        <div className="flex items-center justify-between">
+                          <span className="font-bold text-text-primary dark:text-slate-300 text-sm">{m.nama_item}</span>
+                          <div className="flex gap-2">
+                            <button type="button" onClick={() => {
+                              setMuatanDibawa(p => ({ ...p, [m.id]: { checked: true, nilai: "1" } }));
+                            }} className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all ${muatanDibawa[m.id]?.checked && muatanDibawa[m.id]?.nilai !== "0" ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-200' : 'bg-bg-secondary dark:bg-white/10 text-text-muted border border-slate-100 dark:border-white/10'}`}>Ya</button>
+                            <button type="button" onClick={() => setMuatanDibawa(p => ({ ...p, [m.id]: { checked: true, nilai: "0" } }))} className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all ${muatanDibawa[m.id]?.checked && muatanDibawa[m.id]?.nilai === "0" ? 'bg-rose-500 text-white shadow-lg shadow-rose-200' : 'bg-bg-secondary dark:bg-white/10 text-text-muted border border-slate-100 dark:border-white/10'}`}>Tidak</button>
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  ))}
-                  {/* Lainnya — controlled by vcf.show_produk_lainnya setting */}
-                  {showProdukLainnya && (
-                  <div className="p-4 rounded-xl border border-dashed border-slate-200 dark:border-white/10 bg-slate-50/10">
-                    <div className="flex items-center justify-between">
-                      <span className="font-bold text-text-muted text-sm italic">Lainnya</span>
-                      <div className="flex gap-2">
-                        <button type="button" onClick={() => {
-                          const reset: Record<number, { checked: boolean; nilai: string }> = {};
-                          muatanItems.filter(x => x.jenis === 'dibawa' || x.jenis === 'both').forEach(x => { reset[x.id] = { checked: true, nilai: "0" }; });
-                          setMuatanDibawa(p => ({ ...p, ...reset }));
-                          setMuatanDibawaLainnya(prev => ({ checked: true, nilai: prev.nilai === "0" ? "" : prev.nilai }));
-                        }} className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all ${muatanDibawaLainnya.checked && muatanDibawaLainnya.nilai !== "0" ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-200' : 'bg-bg-secondary dark:bg-white/10 text-text-muted border border-slate-100 dark:border-white/10'}`}>Ya</button>
-                        <button type="button" onClick={() => setMuatanDibawaLainnya({ checked: true, nilai: "0" })} className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all ${muatanDibawaLainnya.checked && muatanDibawaLainnya.nilai === "0" ? 'bg-rose-500 text-white shadow-lg shadow-rose-200' : 'bg-bg-secondary dark:bg-white/10 text-text-muted border border-slate-100 dark:border-white/10'}`}>Tidak</button>
-                      </div>
-                    </div>
-                    {muatanDibawaLainnya.checked && muatanDibawaLainnya.nilai !== "0" && (
-                      <div className="mt-2">
-                        <input type="text" className="form-input text-xs" placeholder="Sebutkan muatan lainnya..." value={muatanDibawaLainnya.nilai === "" ? "" : muatanDibawaLainnya.nilai} onChange={(e) => setMuatanDibawaLainnya({ checked: true, nilai: e.target.value })} />
-                      </div>
-                    )}
-                  </div>
-                  )}
-                </div>
-              </div>
-            )}
-
-            {/* Muatan Diisi - Only shown for LOADING */}
-            {isLoading && (
-              <div>
-                <h3 className="text-sm font-bold uppercase tracking-wider text-slate-400 mb-4">Muatan yang Akan Diisi</h3>
-                <div className="space-y-3">
-                  {muatanItems.filter(m => m.jenis === 'diisi' || m.jenis === 'both').map(m => (
-                    <div key={m.id} className="p-4 rounded-xl border border-slate-100 dark:border-white/5 bg-slate-50/30 dark:bg-white/5">
-                      <div className="flex items-center justify-between">
-                        <span className="font-bold text-text-primary dark:text-slate-300 text-sm">{m.nama_item}</span>
-                        <div className="flex gap-2">
-                          <button type="button" onClick={() => {
-                            const reset: Record<number, { checked: boolean; nilai: string }> = {};
-                            muatanItems.filter(x => x.jenis === 'diisi' || x.jenis === 'both').forEach(x => { reset[x.id] = { checked: true, nilai: "0" }; });
-                            reset[m.id] = { checked: true, nilai: "1" };
-                            setMuatanDiisi(p => ({ ...p, ...reset }));
-                            setMuatanDiisiLainnya({ checked: true, nilai: "0" });
-                          }} className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all ${muatanDiisi[m.id]?.checked && muatanDiisi[m.id]?.nilai !== "0" ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-200' : 'bg-bg-secondary dark:bg-white/10 text-text-muted border border-slate-100 dark:border-white/10'}`}>Ya</button>
-                          <button type="button" onClick={() => setMuatanDiisi(p => ({ ...p, [m.id]: { checked: true, nilai: "0" } }))} className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all ${muatanDiisi[m.id]?.checked && muatanDiisi[m.id]?.nilai === "0" ? 'bg-rose-500 text-white shadow-lg shadow-rose-200' : 'bg-bg-secondary dark:bg-white/10 text-text-muted border border-slate-100 dark:border-white/10'}`}>Tidak</button>
+                    ))}
+                    {/* Lainnya — controlled by vcf.show_produk_lainnya setting */}
+                    {showProdukLainnya && (
+                      <div className="p-4 rounded-xl border border-dashed border-slate-200 dark:border-white/10 bg-slate-50/10">
+                        <div className="flex items-center justify-between">
+                          <span className="font-bold text-text-muted text-sm italic">Lainnya</span>
+                          <div className="flex gap-2">
+                            <button type="button" onClick={() => {
+                              setMuatanDibawaLainnya(prev => ({ checked: true, nilai: prev.nilai === "0" ? "" : prev.nilai }));
+                            }} className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all ${muatanDibawaLainnya.checked && muatanDibawaLainnya.nilai !== "0" ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-200' : 'bg-bg-secondary dark:bg-white/10 text-text-muted border border-slate-100 dark:border-white/10'}`}>Ya</button>
+                            <button type="button" onClick={() => setMuatanDibawaLainnya({ checked: true, nilai: "0" })} className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all ${muatanDibawaLainnya.checked && muatanDibawaLainnya.nilai === "0" ? 'bg-rose-500 text-white shadow-lg shadow-rose-200' : 'bg-bg-secondary dark:bg-white/10 text-text-muted border border-slate-100 dark:border-white/10'}`}>Tidak</button>
+                          </div>
                         </div>
-                      </div>
-                    </div>
-                  ))}
-                  {/* Lainnya hardcoded — no master data needed */}
-                  <div className="p-4 rounded-xl border border-dashed border-slate-200 dark:border-white/10 bg-slate-50/10">
-                    <div className="flex items-center justify-between">
-                      <span className="font-bold text-text-muted text-sm italic">Lainnya</span>
-                      <div className="flex gap-2">
-                        <button type="button" onClick={() => {
-                          const reset: Record<number, { checked: boolean; nilai: string }> = {};
-                          muatanItems.filter(x => x.jenis === 'diisi' || x.jenis === 'both').forEach(x => { reset[x.id] = { checked: true, nilai: "0" }; });
-                          setMuatanDiisi(p => ({ ...p, ...reset }));
-                          setMuatanDiisiLainnya(prev => ({ checked: true, nilai: prev.nilai === "0" ? "" : prev.nilai }));
-                        }} className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all ${muatanDiisiLainnya.checked && muatanDiisiLainnya.nilai !== "0" ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-200' : 'bg-bg-secondary dark:bg-white/10 text-text-muted border border-slate-100 dark:border-white/10'}`}>Ya</button>
-                        <button type="button" onClick={() => setMuatanDiisiLainnya({ checked: true, nilai: "0" })} className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all ${muatanDiisiLainnya.checked && muatanDiisiLainnya.nilai === "0" ? 'bg-rose-500 text-white shadow-lg shadow-rose-200' : 'bg-bg-secondary dark:bg-white/10 text-text-muted border border-slate-100 dark:border-white/10'}`}>Tidak</button>
-                      </div>
-                    </div>
-                    {muatanDiisiLainnya.checked && muatanDiisiLainnya.nilai !== "0" && (
-                      <div className="mt-2">
-                        <input type="text" className="form-input text-xs" placeholder="Sebutkan muatan lainnya..." value={muatanDiisiLainnya.nilai} onChange={(e) => setMuatanDiisiLainnya({ checked: true, nilai: e.target.value })} />
+                        {muatanDibawaLainnya.checked && muatanDibawaLainnya.nilai !== "0" && (
+                          <div className="mt-2">
+                            <input type="text" className="form-input text-xs" placeholder="Sebutkan muatan lainnya..." value={muatanDibawaLainnya.nilai} onChange={(e) => setMuatanDibawaLainnya({ checked: true, nilai: e.target.value })} />
+                          </div>
+                        )}
                       </div>
                     )}
                   </div>
                 </div>
-              </div>
-            )}
+              )}
+
+              {/* Muatan Diisi - Only shown for LOADING */}
+              {isLoading && (
+                <div>
+                  <h3 className="text-sm font-bold uppercase tracking-wider text-slate-400 mb-4">Muatan yang Akan Diisi</h3>
+                  <div className="space-y-3">
+                    {muatanItems.filter(m => m.jenis === 'diisi' || m.jenis === 'both').map(m => (
+                      <div key={m.id} className="p-4 rounded-xl border border-slate-100 dark:border-white/5 bg-slate-50/30 dark:bg-white/5">
+                        <div className="flex items-center justify-between">
+                          <span className="font-bold text-text-primary dark:text-slate-300 text-sm">{m.nama_item}</span>
+                          <div className="flex gap-2">
+                            <button type="button" onClick={() => {
+                              setMuatanDiisi(p => ({ ...p, [m.id]: { checked: true, nilai: "1" } }));
+                            }} className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all ${muatanDiisi[m.id]?.checked && muatanDiisi[m.id]?.nilai !== "0" ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-200' : 'bg-bg-secondary dark:bg-white/10 text-text-muted border border-slate-100 dark:border-white/10'}`}>Ya</button>
+                            <button type="button" onClick={() => setMuatanDiisi(p => ({ ...p, [m.id]: { checked: true, nilai: "0" } }))} className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all ${muatanDiisi[m.id]?.checked && muatanDiisi[m.id]?.nilai === "0" ? 'bg-rose-500 text-white shadow-lg shadow-rose-200' : 'bg-bg-secondary dark:bg-white/10 text-text-muted border border-slate-100 dark:border-white/10'}`}>Tidak</button>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                    {/* Lainnya hardcoded — no master data needed */}
+                    <div className="p-4 rounded-xl border border-dashed border-slate-200 dark:border-white/10 bg-slate-50/10">
+                      <div className="flex items-center justify-between">
+                        <span className="font-bold text-text-muted text-sm italic">Lainnya</span>
+                        <div className="flex gap-2">
+                          <button type="button" onClick={() => {
+                            setMuatanDiisiLainnya(prev => ({ checked: true, nilai: prev.nilai === "0" ? "" : prev.nilai }));
+                          }} className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all ${muatanDiisiLainnya.checked && muatanDiisiLainnya.nilai !== "0" ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-200' : 'bg-bg-secondary dark:bg-white/10 text-text-muted border border-slate-100 dark:border-white/10'}`}>Ya</button>
+                          <button type="button" onClick={() => setMuatanDiisiLainnya({ checked: true, nilai: "0" })} className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all ${muatanDiisiLainnya.checked && muatanDiisiLainnya.nilai === "0" ? 'bg-rose-500 text-white shadow-lg shadow-rose-200' : 'bg-bg-secondary dark:bg-white/10 text-text-muted border border-slate-100 dark:border-white/10'}`}>Tidak</button>
+                        </div>
+                      </div>
+                      {muatanDiisiLainnya.checked && muatanDiisiLainnya.nilai !== "0" && (
+                        <div className="mt-2">
+                          <input type="text" className="form-input text-xs" placeholder="Sebutkan muatan lainnya..." value={muatanDiisiLainnya.nilai} onChange={(e) => setMuatanDiisiLainnya({ checked: true, nilai: e.target.value })} />
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
-        </div>
         )}
 
         {/* SECTION 5: KETERANGAN */}

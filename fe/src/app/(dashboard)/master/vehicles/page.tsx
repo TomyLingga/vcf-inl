@@ -3,10 +3,13 @@
 import { useState, useEffect, useCallback } from "react";
 import { masterApi } from "@/lib/api";
 import { exportToExcel } from "@/lib/exportUtils";
+import { getErrorMessage } from "@/lib/utils";
 import * as XLSX from 'xlsx';
 import PrintMasterTable from "@/components/print/PrintMasterTable";
-import { downloadImportTemplate, parseAndImportExcel } from "@/lib/importTemplate";
+import { downloadImportTemplate, parseExcelPreview, importDataBatch } from "@/lib/importTemplate";
 import DeleteConfirmModal from "@/components/DeleteConfirmModal";
+import ImportConfirmModal from "@/components/ImportConfirmModal";
+import ImportResultModal from "@/components/ImportResultModal";
 
 interface Vehicle {
   id: number;
@@ -30,6 +33,14 @@ export default function VehiclesPage() {
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [deleteId, setDeleteId] = useState<number | null>(null);
   const [deleting, setDeleting] = useState(false);
+
+  // Import states
+  const [showImportModal, setShowImportModal] = useState(false);
+  const [importData, setImportData] = useState<any[]>([]);
+  const [importLoading, setImportLoading] = useState(false);
+  const [importErrors, setImportErrors] = useState<string[]>([]);
+  const [showResultModal, setShowResultModal] = useState(false);
+  const [importResult, setImportResult] = useState({ success: 0, failed: 0, errors: [] as string[] });
 
   // Filters
   const [search, setSearch] = useState("");
@@ -83,7 +94,7 @@ export default function VehiclesPage() {
       await masterApi.updateJenisKendaraan(item.id, { is_active: !item.is_active });
       fetchData();
     } catch (err: any) {
-      alert(err.response?.data?.message || "Gagal mengubah status.");
+      alert(getErrorMessage(err, "Gagal mengubah status."));
     }
   };
 
@@ -100,8 +111,7 @@ export default function VehiclesPage() {
       setShowDeleteModal(false);
       fetchData();
     } catch (err: unknown) {
-      const e = err as { response?: { data?: { message?: string } } };
-      alert(e.response?.data?.message || "Gagal menghapus data.");
+      alert(getErrorMessage(err, "Gagal menghapus data."));
     } finally {
       setDeleting(false);
       setDeleteId(null);
@@ -121,8 +131,7 @@ export default function VehiclesPage() {
       setShowModal(false);
       fetchData();
     } catch (err: unknown) {
-      const e = err as { response?: { data?: { message?: string } } };
-      setError(e.response?.data?.message || "Gagal menyimpan data.");
+      setError(getErrorMessage(err, "Gagal menyimpan data."));
     } finally {
       setSaving(false);
     }
@@ -158,7 +167,7 @@ export default function VehiclesPage() {
                 <input type="file" accept=".xlsx,.xls" className="hidden" onChange={async (e) => {
                   const file = e.target.files?.[0]; if (!file) return;
                   e.target.value = "";
-                  const result = await parseAndImportExcel(
+                  const { data, errors } = await parseExcelPreview(
                     file,
                     (row) => {
                       const nama = String(row["nama *"] ?? row["nama"] ?? "").trim();
@@ -167,13 +176,16 @@ export default function VehiclesPage() {
                       return {
                         nama,
                         kode,
-                        is_active: String(row["is_active (Ya/Tidak)"] ?? row["is_active"] ?? "Ya").trim().toLowerCase() !== "tidak",
+                        is_active: String(row["is_active (Ya/Tidak)"] ?? row["is_active"] ?? "Ya").trim().toLowerCase() !== "tidak" ? "Ya" : "Tidak",
                       };
-                    },
-                    (data) => masterApi.createJenisKendaraan(data)
+                    }
                   );
-                  fetchData();
-                  alert(`Import selesai: ${result.success} berhasil, ${result.failed} gagal.${result.errors.length ? "\n\nDetail:\n" + result.errors.slice(0, 5).join("\n") : ""}`);
+                  setImportData(data);
+                  setImportErrors(errors);
+                  setShowImportModal(true);
+                  if (errors.length > 0) {
+                    console.warn("Import preview errors:", errors);
+                  }
                 }} />
               </label>
             </div>
@@ -413,6 +425,48 @@ export default function VehiclesPage() {
           onClose={() => setIsPrinting(false)}
         />
       )}
+
+      <ImportConfirmModal
+        isOpen={showImportModal}
+        onClose={() => { setShowImportModal(false); setImportData([]); setImportErrors([]); }}
+        onConfirm={async (selectedData) => {
+          setImportLoading(true);
+          const result = await importDataBatch(
+            selectedData,
+            (data) => masterApi.createJenisKendaraan({
+              nama: data.nama,
+              kode: data.kode,
+              is_active: data.is_active === "Ya"
+            })
+          );
+          setImportLoading(false);
+          setShowImportModal(false);
+          setImportData([]);
+          fetchData();
+          return result;
+        }}
+        onResult={(result) => {
+          setImportResult(result);
+          setShowResultModal(true);
+        }}
+        data={importData}
+        columns={[
+          { key: "kode", label: "Kode" },
+          { key: "nama", label: "Nama" },
+          { key: "is_active", label: "Status" },
+        ]}
+        title="Konfirmasi Import Jenis Kendaraan"
+        loading={importLoading}
+      />
+
+      <ImportResultModal
+        isOpen={showResultModal}
+        onClose={() => setShowResultModal(false)}
+        success={importResult.success}
+        failed={importResult.failed}
+        errors={importResult.errors}
+        title="Hasil Import Jenis Kendaraan"
+      />
     </div>
   );
 }

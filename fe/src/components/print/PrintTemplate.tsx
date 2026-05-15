@@ -11,6 +11,13 @@ interface PrintTemplateProps {
   effDate?: string;
   onClose: () => void;
   children: React.ReactNode;
+  settings?: {
+    company_name?: string;
+    company_address?: string;
+    show_qr_signature?: boolean;
+    footer_text?: string;
+    font_family?: string;
+  };
 }
 
 export default function PrintTemplate({
@@ -21,8 +28,17 @@ export default function PrintTemplate({
   effDate = "13-Mar-25",
   onClose,
   children,
+  settings = {},
 }: PrintTemplateProps) {
   const printRef = useRef<HTMLDivElement>(null);
+
+  const {
+    company_name = "PT. INDUSTRI NABATI LESTARI",
+    company_address = "Komp.KEK Sei Mangkei, Kav.2-3, Kec. Bosar Maligas, Kab. Simalungun, Sumatera Utara, 21183",
+    show_qr_signature = true,
+    footer_text = "Dilarang memberikan uang / barang kepada petugas. Apabila terbukti melakukan hal tersebut maka akan dikenakan sanksi keras dan tidak diperbolehkan memasuki area",
+    font_family = "Arial, sans-serif",
+  } = settings;
 
   const handlePrint = () => {
     const html = printRef.current?.innerHTML;
@@ -38,7 +54,7 @@ export default function PrintTemplate({
           <style>
             @page { size: A4 portrait; margin: 0; }
             body { 
-              font-family: Arial, sans-serif; 
+              font-family: ${font_family}; 
               font-size: 7.5px; 
               color: #000; 
               margin: 0; 
@@ -133,15 +149,14 @@ export default function PrintTemplate({
               <tr>
                 <td rowSpan={4} style={{ ...PRINT_STYLES.CELL, padding: 0, position: "relative" }}>
                   <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center" }}>
-                    <img src="/logo.png" style={{ width: 60, height: "auto", display: "block" }} alt="Logo" />
+                    <img src="/logo.svg" style={{ width: 60, height: "auto", display: "block" }} alt="VCF Logo" />
                   </div>
                 </td>
                 <td rowSpan={3} style={{ ...PRINT_STYLES.CELL, textAlign: "center", verticalAlign: "middle", padding: "4px 6px" }}>
-                  <div style={{ fontWeight: "bold", fontSize: 11, letterSpacing: 0.3 }}>PT. INDUSTRI NABATI LESTARI</div>
+                  <div style={{ fontWeight: "bold", fontSize: 11, letterSpacing: 0.3 }}>{company_name}</div>
                   <div style={{ fontWeight: "bold", fontSize: 9, marginTop: 1 }}>PABRIK MINYAK GORENG</div>
                   <div style={{ fontSize: 8, marginTop: 2, lineHeight: 1.4 }}>
-                    Komp.KEK Sei Mangkei, Kav.2-3, Kec. Bosar Maligas,<br />
-                    Kab. Simalungun, Sumatera Utara, 21183
+                    {company_address}
                   </div>
                 </td>
                 <td style={{ ...PRINT_STYLES.CELL, fontSize: 8 }}>No. Dokumen</td>
@@ -171,10 +186,10 @@ export default function PrintTemplate({
           {/* Shared Footer */}
           <div style={{ marginTop: 8, borderTop: "1px solid #000", paddingTop: 4, textAlign: "center" }}>
             <div style={{ fontSize: 7, fontStyle: "italic", lineHeight: 1.5 }}>
-              Dilarang memberikan uang / barang kepada petugas. Apabila terbukti melakukan hal tersebut maka akan dikenakan sanksi keras dan tidak diperbolehkan memasuki area
+              {footer_text}
             </div>
             <div style={{ fontWeight: "bold", fontSize: 8, marginTop: 2, letterSpacing: 0.3 }}>
-              PT. INDUSTRI NABATI LESTARI
+              {company_name}
             </div>
           </div>
         </div>

@@ -3,9 +3,12 @@
 import { useState, useEffect, useCallback } from "react";
 import { masterApi } from "@/lib/api";
 import { exportToExcel, exportToPDF, exportToDocx } from "@/lib/exportUtils";
+import { getErrorMessage } from "@/lib/utils";
 import * as XLSX from 'xlsx';
 import DeleteConfirmModal from "@/components/DeleteConfirmModal";
-import { parseAndImportExcel } from "@/lib/importTemplate";
+import { parseExcelPreview, importDataBatch } from "@/lib/importTemplate";
+import ImportConfirmModal from "@/components/ImportConfirmModal";
+import ImportResultModal from "@/components/ImportResultModal";
 
 interface User {
   id: number;
@@ -36,6 +39,14 @@ export default function UsersPage() {
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [deleteId, setDeleteId] = useState<number | null>(null);
   const [deleting, setDeleting] = useState(false);
+
+  // Import states
+  const [showImportModal, setShowImportModal] = useState(false);
+  const [importData, setImportData] = useState<any[]>([]);
+  const [importLoading, setImportLoading] = useState(false);
+  const [importErrors, setImportErrors] = useState<string[]>([]);
+  const [showResultModal, setShowResultModal] = useState(false);
+  const [importResult, setImportResult] = useState({ success: 0, failed: 0, errors: [] as string[] });
 
   // Filters
   const [search, setSearch] = useState("");
@@ -106,7 +117,7 @@ export default function UsersPage() {
       await masterApi.updateUser(item.id, { is_active: !item.is_active });
       fetchData();
     } catch (err: any) {
-      alert(err.response?.data?.message || "Gagal mengubah status.");
+      alert(getErrorMessage(err, "Gagal mengubah status."));
     }
   };
 
@@ -163,9 +174,8 @@ export default function UsersPage() {
       }
       setShowModal(false);
       fetchData();
-    } catch (err: unknown) {
-      const e = err as { response?: { data?: { message?: string } } };
-      setError(e.response?.data?.message || "Gagal menyimpan data.");
+    } catch (err: any) {
+      setError(getErrorMessage(err, "Gagal menyimpan data."));
     } finally {
       setSaving(false);
     }
@@ -191,7 +201,7 @@ export default function UsersPage() {
                 const file = e.target.files?.[0];
                 if (!file) return;
                 e.target.value = "";
-                const result = await parseAndImportExcel(
+                const { data, errors } = await parseExcelPreview(
                   file,
                   (row) => {
                     const nama = String(row["nama *"] ?? row["nama"] ?? "").trim();
@@ -202,14 +212,17 @@ export default function UsersPage() {
                       nama,
                       username,
                       password,
-                      role: String(row["role"] ?? "security").trim(),
-                      is_active: String(row["is_active (Ya/Tidak)"] ?? row["is_active"] ?? "Ya").trim().toLowerCase() !== "tidak",
+                      role: String(row["role"] ?? "petugas").trim(),
+                      is_active: String(row["is_active (Ya/Tidak)"] ?? row["is_active"] ?? "Ya").trim().toLowerCase() !== "tidak" ? "Ya" : "Tidak",
                     };
-                  },
-                  (data) => masterApi.createUser(data)
+                  }
                 );
-                fetchData();
-                alert(`Import selesai: ${result.success} berhasil, ${result.failed} gagal.${result.errors.length ? "\n\nDetail:\n" + result.errors.slice(0, 5).join("\n") : ""}`);
+                setImportData(data);
+                setImportErrors(errors);
+                setShowImportModal(true);
+                if (errors.length > 0) {
+                  console.warn("Import preview errors:", errors);
+                }
               }}
             />
             <button
@@ -524,6 +537,14 @@ export default function UsersPage() {
           </div>
         </div>
       )}
+      <DeleteConfirmModal
+        isOpen={showDeleteModal}
+        onClose={() => { setShowDeleteModal(false); setDeleteId(null); }}
+        onConfirm={handleDeleteConfirm}
+        loading={deleting}
+        title="Hapus Pengguna"
+        message="Apakah Anda yakin ingin menghapus akun pengguna ini? Petugas tersebut tidak akan bisa lagi mengakses sistem VCF."
+      />
     </div>
   );
 }

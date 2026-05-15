@@ -3,10 +3,13 @@
 import { useState, useEffect, useCallback } from "react";
 import { masterApi } from "@/lib/api";
 import { exportToExcel } from "@/lib/exportUtils";
+import { getErrorMessage } from "@/lib/utils";
 import * as XLSX from 'xlsx';
 import PrintMasterTable from "@/components/print/PrintMasterTable";
-import { downloadImportTemplate, parseAndImportExcel } from "@/lib/importTemplate";
+import { downloadImportTemplate, parseExcelPreview, importDataBatch } from "@/lib/importTemplate";
 import DeleteConfirmModal from "@/components/DeleteConfirmModal";
+import ImportConfirmModal from "@/components/ImportConfirmModal";
+import ImportResultModal from "@/components/ImportResultModal";
 
 interface InspectionItem {
   id: number;
@@ -16,6 +19,8 @@ interface InspectionItem {
   keterangan: string;
   urutan: number;
   is_active: boolean;
+  has_detail?: boolean;
+  keterangan_detail?: string;
 }
 
 export default function PemeriksaanMasukPage() {
@@ -41,6 +46,14 @@ export default function PemeriksaanMasukPage() {
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [deleteId, setDeleteId] = useState<number | null>(null);
   const [deleting, setDeleting] = useState(false);
+
+  // Import states
+  const [showImportModal, setShowImportModal] = useState(false);
+  const [importData, setImportData] = useState<any[]>([]);
+  const [importLoading, setImportLoading] = useState(false);
+  const [importErrors, setImportErrors] = useState<string[]>([]);
+  const [showResultModal, setShowResultModal] = useState(false);
+  const [importResult, setImportResult] = useState({ success: 0, failed: 0, errors: [] as string[] });
 
   // Filters
   const [search, setSearch] = useState("");
@@ -99,8 +112,8 @@ export default function PemeriksaanMasukPage() {
       keterangan: item.keterangan || "",
       urutan: item.urutan,
       is_active: item.is_active,
-      has_detail: (item as any).has_detail || false,
-      keterangan_detail: (item as any).keterangan_detail || ""
+      has_detail: item.has_detail || false,
+      keterangan_detail: item.keterangan_detail || ""
     });
     setError("");
     setShowModal(true);
@@ -111,7 +124,7 @@ export default function PemeriksaanMasukPage() {
       await masterApi.updateItemPemeriksaanMasuk(item.id, { is_active: !item.is_active });
       fetchData();
     } catch (err: any) {
-      alert(err.response?.data?.message || "Gagal mengubah status.");
+      alert(getErrorMessage(err, "Gagal mengubah status."));
     }
   };
 
@@ -149,8 +162,7 @@ export default function PemeriksaanMasukPage() {
       setShowModal(false);
       fetchData();
     } catch (err: unknown) {
-      const axiosError = err as { response?: { data?: { message?: string } } };
-      setError(axiosError.response?.data?.message || "Gagal menyimpan data.");
+      setError(getErrorMessage(err, "Gagal menyimpan data."));
     } finally {
       setSaving(false);
     }
@@ -186,24 +198,27 @@ export default function PemeriksaanMasukPage() {
                 <input type="file" accept=".xlsx,.xls" className="hidden" onChange={async (e) => {
                   const file = e.target.files?.[0]; if (!file) return;
                   e.target.value = "";
-                  const result = await parseAndImportExcel(
+                  const { data, errors } = await parseExcelPreview(
                     file,
                     (row) => {
                       const nama = String(row["nama_item *"] ?? row["nama_item"] ?? "").trim();
                       if (!nama) return null;
                       return {
                         nama_item: nama,
-                        kode: String(row["kode"] ?? "").trim() || null,
-                        tipe_jawaban: String(row["tipe_jawaban"] ?? "").trim() || null,
-                        keterangan: String(row["keterangan"] ?? "").trim() || null,
+                        kode: String(row["kode"] ?? "").trim() || "-",
+                        tipe_jawaban: String(row["tipe_jawaban"] ?? "").trim() || "-",
+                        keterangan: String(row["keterangan"] ?? "").trim() || "-",
                         urutan: parseInt(String(row["urutan"] ?? "0")) || 0,
-                        is_active: String(row["is_active (Ya/Tidak)"] ?? row["is_active"] ?? "Ya").trim().toLowerCase() !== "tidak",
+                        is_active: String(row["is_active (Ya/Tidak)"] ?? row["is_active"] ?? "Ya").trim().toLowerCase() !== "tidak" ? "Ya" : "Tidak",
                       };
-                    },
-                    (data) => masterApi.createItemPemeriksaanMasuk(data)
+                    }
                   );
-                  fetchData();
-                  alert(`Import selesai: ${result.success} berhasil, ${result.failed} gagal.${result.errors.length ? "\n\nDetail:\n" + result.errors.slice(0, 5).join("\n") : ""}`);
+                  setImportData(data);
+                  setImportErrors(errors);
+                  setShowImportModal(true);
+                  if (errors.length > 0) {
+                    console.warn("Import preview errors:", errors);
+                  }
                 }} />
               </label>
             </div>
@@ -488,13 +503,58 @@ export default function PemeriksaanMasukPage() {
         <PrintMasterTable
           title="Master Data — Checklist Masuk"
           subtitle="Item pemeriksaan kendaraan saat masuk (Main Gate Masuk)"
-          headers={["Kode", "Nama Item", "Tipe Jawaban", "Urutan", "Status"]}
-          data={data.map(i => [i.kode, i.nama_item, i.tipe_jawaban, i.urutan, i.is_active ? "Aktif" : "Nonaktif"])}
+          headers={["Urutan", "Nama Item", "Kode", "Tipe Jawaban", "Keterangan", "Status"]}
+          data={data.map(i => [i.urutan, i.nama_item, i.kode, i.tipe_jawaban, i.keterangan, i.is_active ? "Aktif" : "Nonaktif"])}
           onClose={() => setIsPrinting(false)}
         />
       )}
+
+      <ImportConfirmModal
+        isOpen={showImportModal}
+        onClose={() => { setShowImportModal(false); setImportData([]); setImportErrors([]); }}
+        onConfirm={async (selectedData) => {
+          setImportLoading(true);
+          const result = await importDataBatch(
+            selectedData,
+            (data) => masterApi.createItemPemeriksaanMasuk({
+              nama_item: data.nama_item,
+              kode: data.kode === "-" ? null : data.kode,
+              tipe_jawaban: data.tipe_jawaban === "-" ? null : data.tipe_jawaban,
+              keterangan: data.keterangan === "-" ? null : data.keterangan,
+              urutan: data.urutan,
+              is_active: data.is_active === "Ya"
+            })
+          );
+          setImportLoading(false);
+          setShowImportModal(false);
+          setImportData([]);
+          fetchData();
+          return result;
+        }}
+        onResult={(result) => {
+          setImportResult(result);
+          setShowResultModal(true);
+        }}
+        data={importData}
+        columns={[
+          { key: "urutan", label: "Urutan" },
+          { key: "nama_item", label: "Nama Item" },
+          { key: "kode", label: "Kode" },
+          { key: "tipe_jawaban", label: "Tipe" },
+          { key: "is_active", label: "Status" },
+        ]}
+        title="Konfirmasi Import Checklist Masuk"
+        loading={importLoading}
+      />
+
+      <ImportResultModal
+        isOpen={showResultModal}
+        onClose={() => setShowResultModal(false)}
+        success={importResult.success}
+        failed={importResult.failed}
+        errors={importResult.errors}
+        title="Hasil Import Checklist Masuk"
+      />
     </div>
   );
 }
-
-

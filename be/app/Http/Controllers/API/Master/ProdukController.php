@@ -53,7 +53,6 @@ class ProdukController extends Controller
                 'nama'             => 'required|string|max:100',
                 'keterangan'       => 'nullable|string|max:255',
                 'kode'             => 'required|string|max:20|unique:produks,kode',
-                'warna_nomor_urut' => 'required|string|max:20',
                 'nomor_urut'       => 'nullable|integer',
                 'is_active'        => 'boolean',
             ]);
@@ -88,7 +87,6 @@ class ProdukController extends Controller
                 'nama'             => 'sometimes|required|string|max:100',
                 'keterangan'       => 'nullable|string|max:255',
                 'kode'             => 'sometimes|required|string|max:20|unique:produks,kode,' . $produk->id,
-                'warna_nomor_urut' => 'sometimes|required|string|max:20',
                 'nomor_urut'       => 'nullable|integer',
                 'is_active'        => 'boolean',
             ]);

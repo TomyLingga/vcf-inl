@@ -49,12 +49,12 @@ export default function DeleteConfirmModal({
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header Section with Red Gradient */}
-        <div className="relative overflow-hidden bg-gradient-to-br from-red-500 via-red-600 to-rose-600 p-8 text-white">
+        <div className="relative overflow-hidden bg-[conic-gradient(at_top_left,_#ef4444,_#be123c,_#881337)] p-8 text-white">
           <div className="relative z-10">
-            <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-white/20 backdrop-blur-md animate-bounce-subtle">
-              <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+            <div className="mb-4 flex w-16 items-center justify-center rounded-full backdrop-blur-md animate-bounce-subtle">
+              {/* <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
                 <path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M10 11v6M14 11v6" />
-              </svg>
+              </svg> */}
             </div>
             <h2 className="text-2xl font-black tracking-tight leading-tight">{title}</h2>
             <p className="mt-2 text-sm font-medium text-red-50/80 leading-relaxed">
@@ -69,11 +69,11 @@ export default function DeleteConfirmModal({
 
         {/* Action Section */}
         <div className="p-8">
-          <div className="flex flex-col gap-3">
+          <div className="flex flex-row gap-3">
             <button
               onClick={onConfirm}
               disabled={loading}
-              className="group relative flex w-full items-center justify-center gap-2 overflow-hidden rounded-2xl bg-red-500 py-4 font-bold text-white shadow-xl shadow-red-500/30 transition-all hover:bg-red-600 hover:-translate-y-1 active:translate-y-0 disabled:opacity-70 disabled:pointer-events-none"
+              className="group relative flex w-full items-center justify-center gap-2 overflow-hidden rounded-full bg-[conic-gradient(at_top_left,_#ef4444,_#be123c,_#881337)] py-4 font-bold text-white shadow-xl shadow-red-500/30 transition-all hover:bg-red-600 hover:-translate-y-1 active:translate-y-0 disabled:opacity-70 disabled:pointer-events-none"
             >
               <span className="relative z-10 flex items-center gap-2">
                 {loading ? (
@@ -82,7 +82,7 @@ export default function DeleteConfirmModal({
                     MENGHAPUS...
                   </>
                 ) : (
-                  "YA, HAPUS PERMANEN"
+                  "Hapus Data"
                 )}
               </span>
               <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-700" />

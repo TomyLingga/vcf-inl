@@ -72,6 +72,14 @@ export default function DashboardPage() {
   const [stats, setStats] = useState<Stats>({ total: 0, aktif: 0, selesai: 0, hari_ini: 0 });
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
+  const [registerLoading, setRegisterLoading] = useState(false);
+
+  const handleRegisterClick = () => {
+    setRegisterLoading(true);
+    setTimeout(() => {
+      router.push("/vcf/register");
+    }, 800);
+  };
 
   // Fetch dashboard data - all VCFs for today to calculate stats correctly
   const fetchData = useCallback(async () => {
@@ -84,7 +92,7 @@ export default function DashboardPage() {
         per_page: 100 
       });
 
-      const allData: VcfSummary[] = res.data.data || res.data || [];
+      const allData: VcfSummary[] = (res.data.data || res.data || []) as VcfSummary[];
       
       // Calculate stats correctly
       const aktif = allData.filter(v => v.status !== 'selesai' && v.status !== 'reject' && v.status !== 'ditolak').length;
@@ -148,13 +156,30 @@ export default function DashboardPage() {
             {isAdmin() ? "Admin Dashboard · PT. Industri Nabati Lestari" : "Security Officer · Main Gate"}
           </p>
         </div>
-        <Link href="/vcf/register" id="btn-new-vcf" className="btn btn-primary">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-            <circle cx="12" cy="12" r="10" />
-            <path d="M12 8v8M8 12h8" />
-          </svg>
-          Registrasi VCF Baru
-        </Link>
+        <button
+          onClick={handleRegisterClick}
+          id="btn-new-vcf"
+          className="btn btn-primary"
+          disabled={registerLoading}
+          style={{ cursor: registerLoading ? "not-allowed" : "pointer", opacity: registerLoading ? 0.7 : 1 }}
+        >
+          {registerLoading ? (
+            <>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="animate-spin">
+                <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83" />
+              </svg>
+              Memuat...
+            </>
+          ) : (
+            <>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                <circle cx="12" cy="12" r="10" />
+                <path d="M12 8v8M8 12h8" />
+              </svg>
+              Registrasi VCF Baru
+            </>
+          )}
+        </button>
       </div>
 
       {/* Stats row */}
@@ -208,159 +233,104 @@ export default function DashboardPage() {
         )}
       </div>
 
-      {/* Active VCF Table */}
-      <div className="glass-card overflow-hidden">
-        <div
-          className="flex flex-col md:flex-row md:items-center justify-between px-6 py-4 gap-4"
-          style={{ borderBottom: "1px solid var(--border)" }}
-        >
+      {/* Recent Activity Cards */}
+      <div className="glass-card p-6">
+        <div className="flex items-center justify-between mb-6">
           <div>
             <h2 className="font-semibold text-sm" style={{ color: "var(--text-primary)", fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
-              VCF Aktif — Kendaraan di Area
+              Aktivitas Terbaru
             </h2>
             <p className="text-xs mt-0.5" style={{ color: "var(--text-muted)" }}>
-              Auto-refresh setiap 30 detik · {loading ? "Memuat..." : `${filteredVcfs.length} dari ${vcfs.length} record`}
+              Kendaraan aktif di area · {loading ? "Memuat..." : `${vcfs.length} kendaraan`}
             </p>
           </div>
-          <div className="flex items-center gap-3">
-            {/* Search Input */}
-            <div className="relative">
-              <input
-                type="text"
-                placeholder="Cari no polisi/supir..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="form-input text-sm py-2 px-3 pr-8"
-                style={{ minWidth: "200px" }}
-              />
-              <svg
-                className="absolute right-2.5 top-1/2 -translate-y-1/2"
-                width="16"
-                height="16"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                style={{ color: "var(--text-muted)" }}
-              >
-                <circle cx="11" cy="11" r="8" />
-                <path d="m21 21-4.35-4.35" />
-              </svg>
-            </div>
-            <div
-              className="w-2 h-2 rounded-full pulse-glow"
-              style={{ background: "#10b981" }}
-            />
-            <span className="text-xs" style={{ color: "var(--text-muted)" }}>Live</span>
-            <Link href="/vcf" className="btn btn-secondary btn-sm">
-              Lihat Semua
-            </Link>
-          </div>
+          <Link href="/vcf" className="btn btn-secondary btn-sm">
+            Lihat Semua
+          </Link>
         </div>
 
-        <div className="overflow-x-auto">
-          {loading ? (
-            <table className="data-table">
-              <thead>
-                <tr>
-                  <th>No. Urut</th>
-                  <th>No. Polisi</th>
-                  <th>Supir</th>
-                  <th>Transporter</th>
-                  <th>Tipe</th>
-                  <th>Status</th>
-                  <th>Tanggal</th>
-                  <th>Aksi</th>
-                </tr>
-              </thead>
-              <tbody>
-                {[1, 2, 3, 4, 5].map((i) => <TableRowSkeleton key={i} />)}
-              </tbody>
-            </table>
-          ) : filteredVcfs.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-16" style={{ color: "var(--text-muted)" }}>
-              <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="mb-3 opacity-40">
-                <rect x="1" y="3" width="15" height="13" rx="1" />
-                <path d="M16 8h4l3 3v5h-7V8z" />
-                <circle cx="5.5" cy="18.5" r="2.5" />
-                <circle cx="18.5" cy="18.5" r="2.5" />
-              </svg>
-              <p className="text-sm">
-                {searchQuery ? "Tidak ada hasil pencarian" : "Belum ada kendaraan aktif"}
-              </p>
-              <Link href="/vcf/register" className="btn btn-primary btn-sm mt-4">
-                Registrasi Kendaraan Baru
-              </Link>
-            </div>
-          ) : (
-            <table className="data-table">
-              <thead>
-                <tr>
-                  <th>No. Urut</th>
-                  <th>No. Polisi</th>
-                  <th>Supir</th>
-                  <th>Transporter</th>
-                  <th>Tipe</th>
-                  <th>Status</th>
-                  <th>Tanggal</th>
-                  <th>Aksi</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filteredVcfs.map((vcf) => (
-                  <tr key={vcf.id}>
-                    <td>
-                      <span className="font-mono font-semibold text-sm" style={{ color: "#a78bfa" }}>
+        {loading ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {[1, 2, 3, 4, 5, 6].map((i) => (
+              <div key={i} className="glass-card p-4 animate-pulse" style={{ background: "var(--bg-secondary)" }}>
+                <div className="h-4 w-32 bg-gray-200 dark:bg-gray-700 rounded mb-3" />
+                <div className="h-3 w-24 bg-gray-200 dark:bg-gray-700 rounded mb-2" />
+                <div className="h-3 w-20 bg-gray-200 dark:bg-gray-700 rounded" />
+              </div>
+            ))}
+          </div>
+        ) : vcfs.length === 0 ? (
+          <div className="flex flex-col items-center justify-center py-12" style={{ color: "var(--text-muted)" }}>
+            <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="mb-4 opacity-40">
+              <path d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            <p className="text-sm font-medium">Belum ada aktivitas</p>
+            <p className="text-xs mt-1">Mulai dengan registrasi kendaraan baru</p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {vcfs.slice(0, 6).map((vcf) => (
+              <Link
+                key={vcf.id}
+                href={`/vcf/${vcf.id}`}
+                className="glass-card glass-card-hover p-4 block transition-all"
+                style={{ background: "var(--bg-secondary)", border: "1px solid var(--border)" }}
+              >
+                <div className="flex items-start justify-between mb-3">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-lg flex items-center justify-center" style={{
+                      background: vcf.status === "selesai" ? "rgba(16,185,129,0.15)" :
+                             vcf.status === "reject" ? "rgba(239,68,68,0.15)" :
+                             "rgba(59,130,246,0.15)",
+                      color: vcf.status === "selesai" ? "#10b981" :
+                             vcf.status === "reject" ? "#ef4444" : "#3b82f6"
+                    }}>
+                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <rect x="1" y="3" width="15" height="13" rx="1" />
+                        <path d="M16 8h4l3 3v5h-7V8z" />
+                      </svg>
+                    </div>
+                    <div>
+                      <p className="font-mono font-bold text-sm" style={{ color: "#a78bfa" }}>
                         {vcf.nomor_urut}
-                      </span>
-                    </td>
-                    <td>
-                      <span className="font-semibold">{vcf.no_polisi}</span>
-                    </td>
-                    <td style={{ color: "var(--text-secondary)" }}>
-                      {vcf.driver?.nama_supir || "—"}
-                    </td>
-                    <td style={{ color: "var(--text-secondary)" }}>
-                      {vcf.transporter?.nama_transporter || "—"}
-                    </td>
-                    <td>
-                      <span
-                        className="text-xs font-medium px-2 py-0.5 rounded"
-                        style={{
-                          background: vcf.tipe_kegiatan?.includes("loading")
-                            ? "rgba(139,92,246,0.15)"
-                            : "rgba(16,185,129,0.15)",
-                          color: vcf.tipe_kegiatan?.includes("loading") ? "#a78bfa" : "#34d399",
-                        }}
-                      >
-                        {vcf.tipe_kegiatan?.replace(/_/g, " ").toUpperCase()}
-                      </span>
-                    </td>
-                    <td>
-                      <span className={`status-badge ${getStatusColor(vcf.status)}`}>
+                      </p>
+                      <span className={`status-badge text-xs ${getStatusColor(vcf.status)}`}>
                         {getStatusLabel(vcf.status)}
                       </span>
-                    </td>
-                    <td style={{ color: "var(--text-muted)", fontSize: 12 }}>
-                      {vcf.tanggal}
-                    </td>
-                    <td>
-                      <Link
-                        href={`/vcf/${vcf.id}`}
-                        className={`btn btn-sm ${
-                          vcf.status === "selesai" || vcf.status === "reject" ? "btn-secondary" : "btn-primary"
-                        }`}
-                        id={`btn-detail-${vcf.id}`}
-                      >
-                        {getActionLabel(vcf.status)}
-                      </Link>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          )}
-        </div>
+                    </div>
+                  </div>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ color: "var(--text-muted)" }}>
+                    <path d="M5 12h14M12 5l7 7-7 7" />
+                  </svg>
+                </div>
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2">
+                    <span className="font-semibold text-sm" style={{ color: "var(--text-primary)" }}>
+                      {vcf.no_polisi}
+                    </span>
+                    <span
+                      className="text-xs font-medium px-2 py-0.5 rounded"
+                      style={{
+                        background: vcf.tipe_kegiatan?.includes("loading")
+                          ? "rgba(139,92,246,0.15)"
+                          : "rgba(16,185,129,0.15)",
+                        color: vcf.tipe_kegiatan?.includes("loading") ? "#a78bfa" : "#34d399",
+                      }}
+                    >
+                      {vcf.tipe_kegiatan?.replace(/_/g, " ").toUpperCase()}
+                    </span>
+                  </div>
+                  <p className="text-xs" style={{ color: "var(--text-secondary)" }}>
+                    {vcf.driver?.nama_supir || "—"} · {vcf.transporter?.nama_transporter || "—"}
+                  </p>
+                  <p className="text-xs" style={{ color: "var(--text-muted)" }}>
+                    {vcf.tanggal}
+                  </p>
+                </div>
+              </Link>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* Quick actions for officer */}

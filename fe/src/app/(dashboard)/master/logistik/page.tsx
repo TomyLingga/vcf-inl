@@ -3,10 +3,13 @@
 import { useState, useEffect, useCallback } from "react";
 import { masterApi } from "@/lib/api";
 import { exportToExcel } from "@/lib/exportUtils";
+import { getErrorMessage } from "@/lib/utils";
 import * as XLSX from 'xlsx';
 import PrintMasterTable from "@/components/print/PrintMasterTable";
-import { downloadImportTemplate, parseAndImportExcel } from "@/lib/importTemplate";
+import { downloadImportTemplate, parseExcelPreview, importDataBatch } from "@/lib/importTemplate";
 import DeleteConfirmModal from "@/components/DeleteConfirmModal";
+import ImportConfirmModal from "@/components/ImportConfirmModal";
+import ImportResultModal from "@/components/ImportResultModal";
 
 interface Logistik {
   id: number;
@@ -79,7 +82,7 @@ export default function LogistikPage() {
       await masterApi.updateLogistik(item.id, { is_active: !item.is_active });
       fetchData();
     } catch (err: any) {
-      alert(err.response?.data?.message || "Gagal mengubah status.");
+      alert(getErrorMessage(err, "Gagal mengubah status."));
     }
   };
 
@@ -96,7 +99,7 @@ export default function LogistikPage() {
       setShowDeleteModal(false);
       fetchData();
     } catch (err: any) {
-      alert(err.response?.data?.message || "Gagal menghapus data.");
+      alert(getErrorMessage(err, "Gagal menghapus data."));
     } finally {
       setDeleting(false);
       setDeleteId(null);
@@ -116,7 +119,7 @@ export default function LogistikPage() {
       setShowModal(false);
       fetchData();
     } catch (err: any) {
-      setError(err.response?.data?.message || "Gagal menyimpan data.");
+      setError(getErrorMessage(err, "Gagal menyimpan data."));
     } finally {
       setSaving(false);
     }
@@ -149,20 +152,23 @@ export default function LogistikPage() {
                 <input type="file" accept=".xlsx,.xls" className="hidden" onChange={async (e) => {
                   const file = e.target.files?.[0]; if (!file) return;
                   e.target.value = "";
-                  const result = await parseAndImportExcel(
+                  const { data, errors } = await parseExcelPreview(
                     file,
                     (row) => {
                       const nama = String(row["nama_logistik *"] ?? row["nama_logistik"] ?? "").trim();
                       if (!nama) return null;
                       return {
                         nama_logistik: nama,
-                        is_active: String(row["is_active (Ya/Tidak)"] ?? row["is_active"] ?? "Ya").trim().toLowerCase() !== "tidak",
+                        is_active: String(row["is_active (Ya/Tidak)"] ?? row["is_active"] ?? "Ya").trim().toLowerCase() !== "tidak" ? "Ya" : "Tidak",
                       };
-                    },
-                    (data) => masterApi.createLogistik(data)
+                    }
                   );
-                  fetchData();
-                  alert(`Import selesai: ${result.success} berhasil, ${result.failed} gagal.${result.errors.length ? "\n\nDetail:\n" + result.errors.slice(0, 5).join("\n") : ""}`);
+                  setImportData(data);
+                  setImportErrors(errors);
+                  setShowImportModal(true);
+                  if (errors.length > 0) {
+                    console.warn("Import preview errors:", errors);
+                  }
                 }} />
               </label>
             </div>
@@ -307,6 +313,46 @@ export default function LogistikPage() {
           onClose={() => setIsPrinting(false)}
         />
       )}
+
+      <ImportConfirmModal
+        isOpen={showImportModal}
+        onClose={() => { setShowImportModal(false); setImportData([]); setImportErrors([]); }}
+        onConfirm={async (selectedData) => {
+          setImportLoading(true);
+          const result = await importDataBatch(
+            selectedData,
+            (data) => masterApi.createLogistik({
+              nama_logistik: data.nama_logistik,
+              is_active: data.is_active === "Ya"
+            })
+          );
+          setImportLoading(false);
+          setShowImportModal(false);
+          setImportData([]);
+          fetchData();
+          return result;
+        }}
+        onResult={(result) => {
+          setImportResult(result);
+          setShowResultModal(true);
+        }}
+        data={importData}
+        columns={[
+          { key: "nama_logistik", label: "Nama Logistik" },
+          { key: "is_active", label: "Status" },
+        ]}
+        title="Konfirmasi Import Logistik"
+        loading={importLoading}
+      />
+
+      <ImportResultModal
+        isOpen={showResultModal}
+        onClose={() => setShowResultModal(false)}
+        success={importResult.success}
+        failed={importResult.failed}
+        errors={importResult.errors}
+        title="Hasil Import Logistik"
+      />
     </div>
   );
 }

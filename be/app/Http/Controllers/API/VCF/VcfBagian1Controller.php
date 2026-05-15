@@ -69,8 +69,9 @@ class VcfBagian1Controller extends Controller
         } elseif ($request->has('tanggal_dari') && $request->has('tanggal_sampai')) {
             $query->whereBetween('tanggal', [$request->tanggal_dari, $request->tanggal_sampai]);
         } else {
-            // Default: Hari ini
-            $query->whereDate('tanggal', date('Y-m-d'));
+            // Default: Tampilkan VCF aktif dari 7 hari terakhir
+            // Truck yang registrasi hari sebelumnya tapi belum selesai tetap muncul untuk tracking
+            $query->whereDate('tanggal', '>=', \Carbon\Carbon::now()->subDays(7)->toDateString());
         }
 
         if ($request->has('status')) {
@@ -177,15 +178,18 @@ class VcfBagian1Controller extends Controller
 
             // Muatan yang dibawa (unloading)
             'muatan_dibawa'                  => 'nullable|array',
-            'muatan_dibawa.*.item_muatan_id' => 'required|exists:item_muatans,id',
+            'muatan_dibawa.*.item_muatan_id' => 'nullable|required_without:muatan_dibawa.*.nilai|exists:item_muatans,id',
             'muatan_dibawa.*.nilai'          => 'nullable|string|max:255',
             'muatan_dibawa.*.keterangan'     => 'nullable|string',
 
             // Muatan yang akan diisi (loading)
             'muatan_diisi'                  => 'nullable|array',
-            'muatan_diisi.*.item_muatan_id' => 'required|exists:item_muatans,id',
+            'muatan_diisi.*.item_muatan_id' => 'nullable|required_without:muatan_diisi.*.nilai|exists:item_muatans,id',
             'muatan_diisi.*.nilai'          => 'nullable|string|max:255',
             'muatan_diisi.*.keterangan'     => 'nullable|string',
+
+            // Keterangan umum (opsional)
+            'keterangan'                     => 'nullable|string|max:1000',
         ], [
             'tahun_kendaraan.integer' => 'Tahun kendaraan harus berupa angka.',
             'tahun_kendaraan.max'     => 'Tahun kendaraan tidak boleh lebih dari ' . date('Y') . '.',
@@ -218,7 +222,7 @@ class VcfBagian1Controller extends Controller
                 'jam_masuk'          => $validated['jam_masuk'],
                 'muatan_dibawa'      => $validated['muatan_dibawa'] ?? null,
                 'muatan_diisi'       => $validated['muatan_diisi'] ?? null,
-                'keterangan'         => $request->keterangan ?? null,
+                'keterangan'         => $validated['keterangan'] ?? null,
                 'created_by'         => $request->user()->id,
                 'status'             => 'bagian1_selesai',
                 'qr_signature_main_gate' => $request->qr_signature ?? null,
@@ -242,7 +246,7 @@ class VcfBagian1Controller extends Controller
                 foreach ($validated['muatan_dibawa'] as $item) {
                     VcfMuatanDibawa::create([
                         'vcf_id'         => $vcf->id,
-                        'item_muatan_id' => $item['item_muatan_id'],
+                        'item_muatan_id' => $item['item_muatan_id'] ?? null,
                         'nilai'          => $item['nilai'] ?? null,
                         'keterangan'     => $item['keterangan'] ?? null,
                     ]);
@@ -254,7 +258,7 @@ class VcfBagian1Controller extends Controller
                 foreach ($validated['muatan_diisi'] as $item) {
                     VcfMuatanDiisi::create([
                         'vcf_id'         => $vcf->id,
-                        'item_muatan_id' => $item['item_muatan_id'],
+                        'item_muatan_id' => $item['item_muatan_id'] ?? null,
                         'nilai'          => $item['nilai'] ?? null,
                         'keterangan'     => $item['keterangan'] ?? null,
                     ]);
@@ -274,8 +278,11 @@ class VcfBagian1Controller extends Controller
                 'message' => 'VCF Bagian 1 berhasil disimpan.',
                 'data'    => $this->loadVcfFull($vcf->id),
             ], 201);
-        } catch (\Throwable $e) { if ($e instanceof \Illuminate\Validation\ValidationException) { DB::rollBack(); throw $e; }
+        } catch (\Throwable $e) {
             DB::rollBack();
+            if ($e instanceof \Illuminate\Validation\ValidationException) {
+                throw $e;
+            }
             return response()->json([
                 'message' => 'Gagal menyimpan VCF.',
                 'error'   => $e->getMessage(),
@@ -292,15 +299,16 @@ class VcfBagian1Controller extends Controller
     }
 
     /**
-     * Update Bagian 1 — hanya jika status masih 'bagian1_selesai'.
+     * Update Bagian 1 — hanya jika status masih 'bagian1_selesai' atau user adalah admin.
      */
     public function update(Request $request, int $id)
     {
         $vcf = Vcf::findOrFail($id);
 
-        if (in_array($vcf->status, ['selesai', 'reject'])) {
+        // Only admin can edit VCF at any stage. Petugas cannot edit if status is selesai/reject.
+        if (in_array($vcf->status, ['selesai', 'reject']) && !$this->isAdmin()) {
             return response()->json([
-                'message' => 'VCF tidak dapat diedit karena sudah final/ditolak. Status VCF: ' . $vcf->status,
+                'message' => 'VCF tidak dapat diedit karena sudah final/ditolak. Hanya admin yang dapat mengedit VCF pada status ini.',
             ], 422);
         }
 
@@ -336,14 +344,16 @@ class VcfBagian1Controller extends Controller
             'kelengkapan_supir.*.keterangan'     => 'nullable|string',
 
             'muatan_dibawa'                      => 'nullable|array',
-            'muatan_dibawa.*.item_muatan_id'     => 'required|exists:item_muatans,id',
+            'muatan_dibawa.*.item_muatan_id'     => 'nullable|required_without:muatan_dibawa.*.nilai|exists:item_muatans,id',
             'muatan_dibawa.*.nilai'              => 'nullable|string|max:255',
             'muatan_dibawa.*.keterangan'         => 'nullable|string',
 
             'muatan_diisi'                       => 'nullable|array',
-            'muatan_diisi.*.item_muatan_id'      => 'required|exists:item_muatans,id',
+            'muatan_diisi.*.item_muatan_id'      => 'nullable|required_without:muatan_diisi.*.nilai|exists:item_muatans,id',
             'muatan_diisi.*.nilai'               => 'nullable|string|max:255',
             'muatan_diisi.*.keterangan'          => 'nullable|string',
+
+            'keterangan'                         => 'nullable|string|max:1000',
         ], [
             'tahun_kendaraan.integer' => 'Tahun kendaraan harus berupa angka.',
             'tahun_kendaraan.max'     => 'Tahun kendaraan tidak boleh lebih dari ' . date('Y') . '.',
@@ -380,7 +390,7 @@ class VcfBagian1Controller extends Controller
                 foreach ($validated['muatan_dibawa'] as $item) {
                     VcfMuatanDibawa::create([
                         'vcf_id'         => $vcf->id,
-                        'item_muatan_id' => $item['item_muatan_id'],
+                        'item_muatan_id' => $item['item_muatan_id'] ?? null,
                         'nilai'          => $item['nilai'] ?? null,
                         'keterangan'     => $item['keterangan'] ?? null,
                     ]);
@@ -392,7 +402,7 @@ class VcfBagian1Controller extends Controller
                 foreach ($validated['muatan_diisi'] as $item) {
                     VcfMuatanDiisi::create([
                         'vcf_id'         => $vcf->id,
-                        'item_muatan_id' => $item['item_muatan_id'],
+                        'item_muatan_id' => $item['item_muatan_id'] ?? null,
                         'nilai'          => $item['nilai'] ?? null,
                         'keterangan'     => $item['keterangan'] ?? null,
                     ]);

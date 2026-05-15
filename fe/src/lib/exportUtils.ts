@@ -36,7 +36,7 @@ export const exportToExcel = (filename: string, headers: string[], data: any[][]
 
 const getLogoBase64 = async () => {
   try {
-    const response = await fetch('/logo.png');
+    const response = await fetch('/logo.svg');
     const blob = await response.blob();
     return new Promise<string>((resolve) => {
       const reader = new FileReader();

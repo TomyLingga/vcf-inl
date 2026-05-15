@@ -82,6 +82,15 @@ class SettingsSeeder extends Seeder
                 'description' => 'Teks footer di dokumen print',
                 'is_active' => true,
             ],
+            [
+                'key' => 'print.font_family',
+                'value' => 'Arial, sans-serif',
+                'type' => 'string',
+                'group' => 'print',
+                'label' => 'Font Utama',
+                'description' => 'Font utama untuk dokumen print',
+                'is_active' => true,
+            ],
             
             // General Settings
             [
@@ -91,6 +100,15 @@ class SettingsSeeder extends Seeder
                 'group' => 'general',
                 'label' => 'Nama Aplikasi',
                 'description' => 'Nama aplikasi yang ditampilkan di header',
+                'is_active' => true,
+            ],
+            [
+                'key' => 'general.timezone',
+                'value' => 'Asia/Jakarta',
+                'type' => 'string',
+                'group' => 'general',
+                'label' => 'Zona Waktu',
+                'description' => 'Zona waktu sistem untuk pencatatan waktu',
                 'is_active' => true,
             ],
         ];

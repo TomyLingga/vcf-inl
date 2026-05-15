@@ -17,6 +17,7 @@ class Driver extends Model
         'jenis_sim',
         'tgl_berlaku_sim',
         'is_active',
+        'status'
     ];
 
     protected $casts = [

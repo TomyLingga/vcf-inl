@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation"; // used in RegisterButton
 import { vcfApi } from "@/lib/api";
 import { prefetchMasterData } from "@/lib/masterDataCache";
 import { getStatusLabel, getStatusColor } from "@/lib/utils";
+import GuideSection from "@/components/GuideSection";
 
 interface VcfSummary {
   id: number;
@@ -34,7 +35,7 @@ function RegisterButton() {
         </svg>
       ) : (
         <div className="w-7 h-7 rounded-lg bg-blue-500/10 text-blue-500 flex items-center justify-center group-hover:scale-110 transition-transform">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><path d="M12 5v14M5 12h14"/></svg>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><path d="M12 5v14M5 12h14" /></svg>
         </div>
       )}
       <p className="text-[13px] font-bold text-primary uppercase">{nav ? "Memuat..." : "Registrasi"}</p>
@@ -94,7 +95,8 @@ export default function VcfQuickAccessPage() {
   const [filter, setFilter] = useState("aktif");
   const [search, setSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
-  const [viewMode, setViewMode] = useState<"card" | "table">("card");
+  const [viewMode, setViewMode] = useState<"card" | "table">("table");
+  const [showGuide, setShowGuide] = useState(false);
 
   // Debounce search input
   useEffect(() => {
@@ -107,10 +109,10 @@ export default function VcfQuickAccessPage() {
   const fetchActive = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await vcfApi.getList({ 
-        status: filter, 
+      const res = await vcfApi.getList({
+        status: filter,
         search: debouncedSearch,
-        per_page: 15 
+        per_page: 15
       });
       setVcfs(res.data.data || res.data);
     } catch {
@@ -136,12 +138,32 @@ export default function VcfQuickAccessPage() {
   return (
     <div className="max-w-6xl mx-auto">
       {/* Header */}
-      <div className="mb-8">
-        <h1 className="text-2xl font-bold text-primary" style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
-          Operasional VCF
-        </h1>
-        <p className="text-secondary text-sm">Akses cepat formulir pemeriksaan kendaraan — PT. INL</p>
+      <div className="mb-8 flex flex-col md:flex-row md:items-end justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-bold text-primary" style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
+            Operasional VCF
+          </h1>
+          <p className="text-secondary text-sm">Akses cepat formulir pemeriksaan kendaraan — PT. INL</p>
+        </div>
+        <button
+          onClick={() => setShowGuide(!showGuide)}
+          className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all border ${showGuide
+              ? "bg-blue-500/10 text-blue-500 border-blue-500/30"
+              : "bg-bg-secondary text-text-muted border-border hover:border-blue-500/30"
+            }`}
+        >
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+            <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z" /><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z" />
+          </svg>
+          <span>{showGuide ? "Tutup Panduan" : "Panduan Operasional"}</span>
+        </button>
       </div>
+
+      {showGuide && (
+        <div className="mb-8 animate-in fade-in slide-in-from-top-4 duration-300">
+          <GuideSection />
+        </div>
+      )}
 
       {/* Stage Filters / Tabs */}
       <div className="flex gap-2 mb-6 overflow-x-auto pb-2 no-scrollbar">
@@ -158,16 +180,16 @@ export default function VcfQuickAccessPage() {
             style={
               filter === tab.stage
                 ? {
-                    background: tab.color,
-                    borderColor: tab.color,
-                    color: "white",
-                    boxShadow: `0 8px 16px ${tab.color}33`,
-                  }
+                  background: tab.color,
+                  borderColor: tab.color,
+                  color: "white",
+                  boxShadow: `0 8px 16px ${tab.color}33`,
+                }
                 : {
-                    background: "var(--bg-secondary)",
-                    color: "var(--text-muted)",
-                    border: "1px solid var(--border)",
-                  }
+                  background: "var(--bg-secondary)",
+                  color: "var(--text-muted)",
+                  border: "1px solid var(--border)",
+                }
             }
           >
             {tab.label}
@@ -196,13 +218,13 @@ export default function VcfQuickAccessPage() {
             }}
           />
         </div>
-        
+
         <div className="flex gap-4 w-full md:w-auto">
           <div className="glass-card flex-1 md:flex-none md:min-w-[120px] p-2 px-4 flex flex-col items-center justify-center text-center">
             <p className="text-[9px] font-bold text-secondary uppercase mb-0.5">Total</p>
             <p className="text-xl font-bold text-blue-500">{vcfs.length}</p>
           </div>
-<RegisterButton />
+          <RegisterButton />
         </div>
       </div>
 
@@ -217,19 +239,6 @@ export default function VcfQuickAccessPage() {
             {/* View toggle */}
             <div className="flex items-center rounded-lg overflow-hidden" style={{ border: "1px solid var(--border)", background: "var(--bg-secondary)" }}>
               <button
-                onClick={() => setViewMode("card")}
-                title="Tampilan kartu"
-                className="p-2 transition-all"
-                style={viewMode === "card"
-                  ? { background: "rgba(59,130,246,0.15)", color: "#60a5fa" }
-                  : { color: "var(--text-muted)" }}
-              >
-                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/>
-                  <rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/>
-                </svg>
-              </button>
-              <button
                 onClick={() => setViewMode("table")}
                 title="Tampilan tabel"
                 className="p-2 transition-all"
@@ -238,7 +247,20 @@ export default function VcfQuickAccessPage() {
                   : { color: "var(--text-muted)" }}
               >
                 <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/>
+                  <line x1="3" y1="6" x2="21" y2="6" /><line x1="3" y1="12" x2="21" y2="12" /><line x1="3" y1="18" x2="21" y2="18" />
+                </svg>
+              </button>
+              <button
+                onClick={() => setViewMode("card")}
+                title="Tampilan kartu"
+                className="p-2 transition-all"
+                style={viewMode === "card"
+                  ? { background: "rgba(59,130,246,0.15)", color: "#60a5fa" }
+                  : { color: "var(--text-muted)" }}
+              >
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <rect x="3" y="3" width="7" height="7" rx="1" /><rect x="14" y="3" width="7" height="7" rx="1" />
+                  <rect x="3" y="14" width="7" height="7" rx="1" /><rect x="14" y="14" width="7" height="7" rx="1" />
                 </svg>
               </button>
             </div>
@@ -253,7 +275,7 @@ export default function VcfQuickAccessPage() {
           <div className="p-4">
             {loading ? (
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                {[1,2,3,4,5,6].map(i => <MobileCardSkeleton key={i} />)}
+                {[1, 2, 3, 4, 5, 6].map(i => <MobileCardSkeleton key={i} />)}
               </div>
             ) : vcfs.length === 0 ? (
               <div className="py-12 text-center text-secondary text-sm">Tidak ada kendaraan aktif saat ini.</div>
@@ -301,7 +323,7 @@ export default function VcfQuickAccessPage() {
                     <th>No.</th><th>No. Polisi</th><th>Supir</th><th>Tipe</th><th>Status</th><th>Aksi</th>
                   </tr>
                 </thead>
-                <tbody>{[1,2,3,4,5].map(i => <TableRowSkeleton key={i} />)}</tbody>
+                <tbody>{[1, 2, 3, 4, 5].map(i => <TableRowSkeleton key={i} />)}</tbody>
               </table>
             ) : vcfs.length === 0 ? (
               <div className="py-12 text-center text-secondary text-sm">Tidak ada kendaraan aktif saat ini.</div>
@@ -332,9 +354,8 @@ export default function VcfQuickAccessPage() {
                       <td>
                         <Link
                           href={`/vcf/${vcf.id}`}
-                          className={`btn btn-sm font-bold text-[10px] uppercase ${
-                            vcf.status === "selesai" || vcf.status === "reject" ? "btn-secondary" : "btn-primary"
-                          }`}
+                          className={`btn btn-sm font-bold text-[10px] uppercase ${vcf.status === "selesai" || vcf.status === "reject" ? "btn-secondary" : "btn-primary"
+                            }`}
                         >
                           {getActionLabel(vcf.status)}
                         </Link>

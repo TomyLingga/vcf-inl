@@ -6,6 +6,7 @@ import { isAdmin } from "@/lib/auth";
 import { useRouter } from "next/navigation";
 import { clearMasterDataCache } from "@/lib/masterDataCache";
 import { ACCENT_PRESETS, FONT_PRESETS, applyAppearance } from "@/components/ThemeProvider";
+import GuideSection from "@/components/GuideSection";
 
 interface Setting {
   id: number;
@@ -71,6 +72,7 @@ export default function SettingsPage() {
   const [saving, setSaving] = useState<string | null>(null);
   const [toast, setToast] = useState<{ type: "success" | "error"; text: string } | null>(null);
   const [activeTab, setActiveTab] = useState<"system" | "appearance">("system");
+  const [showGuideModal, setShowGuideModal] = useState(false);
   const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const [accentIdx, setAccentIdx] = useState(0);
@@ -137,8 +139,11 @@ export default function SettingsPage() {
         return updated;
       });
       showToast("success", "Tersimpan");
-    } catch {
-      showToast("error", "Gagal menyimpan");
+    } catch (err: any) {
+      const msg = err?.response?.data?.message || err?.response?.data?.error || "Gagal menyimpan";
+      showToast("error", msg);
+      // Re-fetch to ensure UI is in sync with server
+      await fetchSettings();
     } finally {
       setSaving(null);
     }
@@ -220,24 +225,15 @@ export default function SettingsPage() {
         </button>
       );
     }
-    if (setting.type === "integer") {
-      return (
-        <input type="number" value={setting.value}
-          onChange={e => handleUpdate(setting.key, parseInt(e.target.value) || 0)}
-          disabled={disabled} className="form-input w-28 text-right font-mono" />
-      );
-    }
-    return (
-      <input type="text" value={setting.value}
-        onChange={e => handleUpdate(setting.key, e.target.value)}
-        disabled={disabled} className="form-input w-64" />
-    );
+    return <SettingTextInput setting={setting} onUpdate={handleUpdate} saving={disabled} />;
   };
 
   const TABS = [
     { id: "system", label: "Pengaturan Sistem", icon: <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="3"/><path d="M12 1v4M12 19v4M4.22 4.22l2.83 2.83M16.95 16.95l2.83 2.83M1 12h4M19 12h4M4.22 19.78l2.83-2.83M16.95 7.05l2.83-2.83"/></svg> },
     { id: "appearance", label: "Tampilan & Tema", icon: <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="13.5" cy="6.5" r=".5" fill="currentColor"/><circle cx="17.5" cy="10.5" r=".5" fill="currentColor"/><circle cx="8.5" cy="7.5" r=".5" fill="currentColor"/><circle cx="6.5" cy="12.5" r=".5" fill="currentColor"/><path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10c.926 0 1.648-.746 1.648-1.688 0-.437-.18-.835-.437-1.125-.29-.289-.438-.652-.438-1.125a1.64 1.64 0 0 1 1.668-1.668h1.996c3.051 0 5.555-2.503 5.555-5.554C21.965 6.012 17.461 2 12 2z"/></svg> },
   ] as const;
+
+  const GUIDE_ICON = <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>;
 
   if (loading) return (
     <div className="flex items-center justify-center py-20">
@@ -265,7 +261,7 @@ export default function SettingsPage() {
       </div>
 
       {/* Tabs */}
-      <div className="flex gap-1 p-1 rounded-xl mb-6 w-fit" style={{ background: "var(--bg-secondary)", border: "1px solid var(--border)" }}>
+      <div className="flex flex-wrap gap-1 p-1 rounded-xl mb-6 w-fit" style={{ background: "var(--bg-secondary)", border: "1px solid var(--border)" }}>
         {TABS.map(tab => (
           <button key={tab.id} onClick={() => setActiveTab(tab.id)}
             className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold transition-all ${activeTab === tab.id ? "bg-white dark:bg-slate-700 shadow-sm text-text-primary" : "text-text-muted hover:text-text-primary"}`}
@@ -273,6 +269,12 @@ export default function SettingsPage() {
             {tab.icon}{tab.label}
           </button>
         ))}
+        <button
+          onClick={() => setShowGuideModal(true)}
+          className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold transition-all text-text-muted hover:text-text-primary"
+        >
+          {GUIDE_ICON}Panduan Operasional
+        </button>
       </div>
 
       {/* System Settings Tab */}
@@ -312,6 +314,34 @@ export default function SettingsPage() {
               </div>
             );
           })}
+        </div>
+      )}
+
+      {/* Guide Modal */}
+      {showGuideModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ background: "rgba(0,0,0,0.6)" }} onClick={() => setShowGuideModal(false)}>
+          <div className="glass-card w-full max-w-4xl max-h-[85vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+            <div className="sticky top-0 flex items-center justify-between px-6 py-4 border-b border-border" style={{ background: "var(--bg-secondary)" }}>
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ background: "var(--accent-primary)", color: "white" }}>
+                  {GUIDE_ICON}
+                </div>
+                <h2 className="font-bold text-base" style={{ color: "var(--text-primary)" }}>Panduan Operasional</h2>
+              </div>
+              <button
+                onClick={() => setShowGuideModal(false)}
+                className="w-9 h-9 flex items-center justify-center rounded-lg transition-colors hover:bg-white/10"
+                style={{ color: "var(--text-muted)" }}
+              >
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M18 6 6 18M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+            <div className="p-6">
+              <GuideSection />
+            </div>
+          </div>
         </div>
       )}
 
@@ -444,6 +474,76 @@ export default function SettingsPage() {
     </div>
   );
 }
+
+function SettingTextInput({ setting, onUpdate, saving }: { setting: Setting; onUpdate: (k: string, v: any) => void; saving: boolean }) {
+  const [localValue, setLocalValue] = useState(setting.value ?? "");
+
+  useEffect(() => { setLocalValue(setting.value ?? ""); }, [setting.value]);
+
+  const commit = () => {
+    const newVal = setting.type === "integer" ? (parseInt(String(localValue)) || 0) : localValue;
+    if (newVal !== setting.value) onUpdate(setting.key, newVal);
+  };
+
+  const onKeyDown = (e: React.KeyboardEvent) => { if (e.key === "Enter" && !e.shiftKey) (e.target as HTMLElement).blur(); };
+
+  if (setting.key === "print.company_address") {
+    return (
+      <textarea
+        value={localValue}
+        onChange={e => setLocalValue(e.target.value)}
+        onBlur={commit}
+        disabled={saving}
+        rows={3}
+        placeholder="Masukkan alamat perusahaan..."
+        className="form-input w-72 text-sm leading-relaxed resize-none"
+      />
+    );
+  }
+
+  if (setting.key === "print.font_family") {
+    const fonts = [
+      { label: "Arial (Standard)", value: "Arial, sans-serif" },
+      { label: "Plus Jakarta Sans", value: "'Plus Jakarta Sans', sans-serif" },
+      { label: "Inter", value: "Inter, sans-serif" },
+      { label: "Roboto", value: "Roboto, sans-serif" },
+      { label: "Open Sans", value: "'Open Sans', sans-serif" },
+      { label: "Times New Roman", value: "'Times New Roman', serif" },
+    ];
+    return (
+      <select value={localValue} onChange={e => { setLocalValue(e.target.value); onUpdate(setting.key, e.target.value); }} disabled={saving} className="form-select w-64">
+        {fonts.map(f => <option key={f.value} value={f.value}>{f.label}</option>)}
+      </select>
+    );
+  }
+
+  if (setting.key === "general.timezone") {
+    const zones = [
+      { label: "WIB — Asia/Jakarta (UTC+7)", value: "Asia/Jakarta" },
+      { label: "WITA — Asia/Makassar (UTC+8)", value: "Asia/Makassar" },
+      { label: "WIT — Asia/Jayapura (UTC+9)", value: "Asia/Jayapura" },
+      { label: "UTC / GMT", value: "UTC" },
+    ];
+    return (
+      <select value={localValue} onChange={e => { setLocalValue(e.target.value); onUpdate(setting.key, e.target.value); }} disabled={saving} className="form-select w-64">
+        {zones.map(z => <option key={z.value} value={z.value}>{z.label}</option>)}
+      </select>
+    );
+  }
+
+  return (
+    <input
+      type={setting.type === "integer" ? "number" : "text"}
+      value={localValue}
+      onChange={e => setLocalValue(e.target.value)}
+      onBlur={commit}
+      onKeyDown={onKeyDown}
+      disabled={saving}
+      className={`form-input ${setting.type === "integer" ? "w-28 text-right font-mono" : "w-64"}`}
+    />
+  );
+}
+
 
 function SectionHeader({ icon, title, desc }: { icon: React.ReactNode; title: string; desc: string }) {
   return (

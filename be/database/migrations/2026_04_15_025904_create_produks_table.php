@@ -17,7 +17,6 @@ class CreateProduksTable extends Migration
             $table->id();
             $table->string('nama');
             $table->string('kode');
-            $table->string('warna_nomor_urut');
             $table->integer('nomor_urut')->nullable();
             $table->boolean('is_active');
             $table->timestamps();

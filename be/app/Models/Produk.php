@@ -16,7 +16,6 @@ class Produk extends Model
         'nama',
         'keterangan',
         'kode',
-        'warna_nomor_urut',
         'nomor_urut',
         'is_active'
     ];

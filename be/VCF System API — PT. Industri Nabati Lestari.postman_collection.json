@@ -84,6 +84,15 @@
 						"header": [{ "key": "Accept", "value": "application/json" }],
 						"url": { "raw": "{{base_url}}/logout", "host": ["{{base_url}}"], "path": ["logout"] }
 					}
+				},
+				{
+					"name": "Dashboard Stats",
+					"request": {
+						"auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{token}}", "type": "string" }] },
+						"method": "GET",
+						"header": [{ "key": "Accept", "value": "application/json" }],
+						"url": { "raw": "{{base_url}}/dashboard/stats", "host": ["{{base_url}}"], "path": ["dashboard", "stats"] }
+					}
 				}
 			]
 		},
@@ -577,6 +586,87 @@
 			]
 		},
 		{
+			"name": "⚙️ Settings",
+			"item": [
+				{
+					"name": "Get All Settings",
+					"request": {
+						"auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{token}}", "type": "string" }] },
+						"method": "GET",
+						"header": [{ "key": "Accept", "value": "application/json" }],
+						"url": { "raw": "{{base_url}}/settings", "host": ["{{base_url}}"], "path": ["settings"] }
+					}
+				},
+				{
+					"name": "Get Public Settings",
+					"request": {
+						"method": "GET",
+						"header": [{ "key": "Accept", "value": "application/json" }],
+						"url": { "raw": "{{base_url}}/settings/public", "host": ["{{base_url}}"], "path": ["settings", "public"] }
+					}
+				},
+				{
+					"name": "Get VCF Settings",
+					"request": {
+						"auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{token}}", "type": "string" }] },
+						"method": "GET",
+						"header": [{ "key": "Accept", "value": "application/json" }],
+						"url": { "raw": "{{base_url}}/settings/vcf", "host": ["{{base_url}}"], "path": ["settings", "vcf"] }
+					}
+				},
+				{
+					"name": "Get Print Settings",
+					"request": {
+						"auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{token}}", "type": "string" }] },
+						"method": "GET",
+						"header": [{ "key": "Accept", "value": "application/json" }],
+						"url": { "raw": "{{base_url}}/settings/print", "host": ["{{base_url}}"], "path": ["settings", "print"] }
+					}
+				},
+				{
+					"name": "Get Setting by Key",
+					"request": {
+						"auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{token}}", "type": "string" }] },
+						"method": "GET",
+						"header": [{ "key": "Accept", "value": "application/json" }],
+						"url": { "raw": "{{base_url}}/settings/{{setting_key}}", "host": ["{{base_url}}"], "path": ["settings", "{{setting_key}}"] }
+					}
+				},
+				{
+					"name": "Update Setting (Admin)",
+					"request": {
+						"auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{token}}", "type": "string" }] },
+						"method": "PUT",
+						"header": [
+							{ "key": "Content-Type", "value": "application/json" },
+							{ "key": "Accept", "value": "application/json" }
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"value\": \"true\",\n    \"is_active\": true\n}"
+						},
+						"url": { "raw": "{{base_url}}/settings/{{setting_key}}", "host": ["{{base_url}}"], "path": ["settings", "{{setting_key}}"] }
+					}
+				},
+				{
+					"name": "Update Batch Settings (Admin)",
+					"request": {
+						"auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{token}}", "type": "string" }] },
+						"method": "PUT",
+						"header": [
+							{ "key": "Content-Type", "value": "application/json" },
+							{ "key": "Accept", "value": "application/json" }
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"settings\": [\n        { \"key\": \"vcf.show_produk_lainnya\", \"value\": \"true\" },\n        { \"key\": \"print.company_name\", \"value\": \"PT. INDUSTRI NABATI LESTARI\" }\n    ]\n}"
+						},
+						"url": { "raw": "{{base_url}}/settings/batch", "host": ["{{base_url}}"], "path": ["settings", "batch"] }
+					}
+				}
+			]
+		},
+		{
 			"name": "📦 VCF Transaksi",
 			"item": [
 				{
@@ -639,7 +729,7 @@
 								],
 								"body": {
 									"mode": "raw",
-									"raw": "{\n    \"tanggal\": \"2026-05-10\",\n    \"logistik_id\": 1,\n    \"produk_id\": 1,\n    \"tipe_kegiatan\": \"loading_lokal\",\n    \"asal_tujuan\": \"Medan\",\n    \"jenis_kendaraan_id\": 1,\n    \"no_polisi\": \"BK 1234 XY\",\n    \"transporter_id\": 1,\n    \"driver_id\": 1,\n    \"jam_masuk\": \"08:00\",\n    \"beban_tambahan_ada\": false,\n    \"kelengkapan_supir\": [\n        { \"item_id\": 1, \"nilai\": true, \"keterangan\": null },\n        { \"item_id\": 2, \"nilai\": true, \"keterangan\": null }\n    ]\n}"
+									"raw": "{\n    \"tanggal\": \"2026-05-10\",\n    \"produk\": \"CPO\",\n    \"tipe_kegiatan\": \"loading_lokal\",\n    \"asal_tujuan\": \"Medan\",\n    \"jenis_kendaraan_id\": 1,\n    \"no_polisi\": \"BK 1234 XY\",\n    \"tipe_kendaraan\": \"Truk Tangki\",\n    \"tahun_kendaraan\": 2020,\n    \"transporter_id\": 1,\n    \"driver_id\": 1,\n    \"jam_masuk\": \"08:00\",\n    \"keterangan\": \"Keterangan tambahan\"\n}"
 								},
 								"url": { "raw": "{{base_url}}/vcf", "host": ["{{base_url}}"], "path": ["vcf"] }
 							}
@@ -668,12 +758,37 @@
 								},
 								"url": { "raw": "{{base_url}}/vcf/{{vcf_id}}", "host": ["{{base_url}}"], "path": ["vcf", "{{vcf_id}}"] }
 							}
+						},
+						{
+							"name": "Reject at Step 1",
+							"request": {
+								"auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{token}}", "type": "string" }] },
+								"method": "POST",
+								"header": [
+									{ "key": "Content-Type", "value": "application/json" },
+									{ "key": "Accept", "value": "application/json" }
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n    \"catatan_reject\": \"Data tidak lengkap\"\n}"
+								},
+								"url": { "raw": "{{base_url}}/vcf/{{vcf_id}}/reject", "host": ["{{base_url}}"], "path": ["vcf", "{{vcf_id}}", "reject"] }
+							}
 						}
 					]
 				},
 				{
 					"name": "Step 2: Weighbridge Masuk",
 					"item": [
+						{
+							"name": "Get Step 2 Detail",
+							"request": {
+								"auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{token}}", "type": "string" }] },
+								"method": "GET",
+								"header": [{ "key": "Accept", "value": "application/json" }],
+								"url": { "raw": "{{base_url}}/vcf/{{vcf_id}}/bagian2", "host": ["{{base_url}}"], "path": ["vcf", "{{vcf_id}}", "bagian2"] }
+							}
+						},
 						{
 							"name": "Submit Step 2",
 							"request": {
@@ -685,7 +800,23 @@
 								],
 								"body": {
 									"mode": "raw",
-									"raw": "{\n    \"pemeriksaan\": [\n        { \"item_id\": 1, \"nilai\": \"Bagus\", \"keterangan\": null }\n    ],\n    \"segel_terpasang\": true,\n    \"jumlah_segel\": 1,\n    \"nomor_segel\": [\"SGL-001\"]\n}"
+									"raw": "{\n    \"pemeriksaan\": [\n        { \"item_id\": 1, \"nilai\": \"Bagus\", \"keterangan\": null }\n    ],\n    \"jenis_beban\": \"Pallet\",\n    \"segel_terpasang\": true,\n    \"jumlah_segel\": 1,\n    \"nomor_segel\": [\"SGL-001\"],\n    \"keterangan\": \"Keterangan tambahan\"\n}"
+								},
+								"url": { "raw": "{{base_url}}/vcf/{{vcf_id}}/bagian2", "host": ["{{base_url}}"], "path": ["vcf", "{{vcf_id}}", "bagian2"] }
+							}
+						},
+						{
+							"name": "Update Step 2",
+							"request": {
+								"auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{token}}", "type": "string" }] },
+								"method": "PUT",
+								"header": [
+									{ "key": "Content-Type", "value": "application/json" },
+									{ "key": "Accept", "value": "application/json" }
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n    \"jenis_beban\": \"Pallet Updated\"\n}"
 								},
 								"url": { "raw": "{{base_url}}/vcf/{{vcf_id}}/bagian2", "host": ["{{base_url}}"], "path": ["vcf", "{{vcf_id}}", "bagian2"] }
 							}
@@ -703,7 +834,7 @@
 									"mode": "raw",
 									"raw": "{\n    \"catatan_reject\": \"Tangki bocor\"\n}"
 								},
-								"url": { "raw": "{{base_url}}/vcf/{{vcf_id}}/reject", "host": ["{{base_url}}"], "path": ["vcf", "{{vcf_id}}", "reject"] }
+								"url": { "raw": "{{base_url}}/vcf/{{vcf_id}}/bagian2/reject", "host": ["{{base_url}}"], "path": ["vcf", "{{vcf_id}}", "bagian2", "reject"] }
 							}
 						}
 					]
@@ -711,6 +842,15 @@
 				{
 					"name": "Step 3: Weighbridge Keluar",
 					"item": [
+						{
+							"name": "Get Step 3 Detail",
+							"request": {
+								"auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{token}}", "type": "string" }] },
+								"method": "GET",
+								"header": [{ "key": "Accept", "value": "application/json" }],
+								"url": { "raw": "{{base_url}}/vcf/{{vcf_id}}/bagian3", "host": ["{{base_url}}"], "path": ["vcf", "{{vcf_id}}", "bagian3"] }
+							}
+						},
 						{
 							"name": "Submit Step 3",
 							"request": {
@@ -722,9 +862,41 @@
 								],
 								"body": {
 									"mode": "raw",
-									"raw": "{\n    \"pemeriksaan\": [\n        { \"item_id\": 1, \"nilai\": \"Bersih\", \"keterangan\": null }\n    ],\n    \"segel_terpasang\": true,\n    \"jumlah_segel\": 1,\n    \"nomor_segel\": [\"SGL-OUT-001\"]\n}"
+									"raw": "{\n    \"pemeriksaan\": [\n        { \"item_id\": 1, \"nilai\": \"Bersih\", \"keterangan\": null }\n    ],\n    \"jenis_beban\": \"Pallet\",\n    \"segel_terpasang\": true,\n    \"jumlah_segel\": 1,\n    \"nomor_segel\": [\"SGL-OUT-001\"],\n    \"keterangan\": \"Keterangan tambahan\"\n}"
 								},
 								"url": { "raw": "{{base_url}}/vcf/{{vcf_id}}/bagian3", "host": ["{{base_url}}"], "path": ["vcf", "{{vcf_id}}", "bagian3"] }
+							}
+						},
+						{
+							"name": "Update Step 3",
+							"request": {
+								"auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{token}}", "type": "string" }] },
+								"method": "PUT",
+								"header": [
+									{ "key": "Content-Type", "value": "application/json" },
+									{ "key": "Accept", "value": "application/json" }
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n    \"jenis_beban\": \"Pallet Updated\"\n}"
+								},
+								"url": { "raw": "{{base_url}}/vcf/{{vcf_id}}/bagian3", "host": ["{{base_url}}"], "path": ["vcf", "{{vcf_id}}", "bagian3"] }
+							}
+						},
+						{
+							"name": "Reject at Step 3",
+							"request": {
+								"auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{token}}", "type": "string" }] },
+								"method": "POST",
+								"header": [
+									{ "key": "Content-Type", "value": "application/json" },
+									{ "key": "Accept", "value": "application/json" }
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n    \"catatan_reject\": \"Muatan tidak sesuai\"\n}"
+								},
+								"url": { "raw": "{{base_url}}/vcf/{{vcf_id}}/bagian3/reject", "host": ["{{base_url}}"], "path": ["vcf", "{{vcf_id}}", "bagian3", "reject"] }
 							}
 						}
 					]
@@ -732,6 +904,15 @@
 				{
 					"name": "Step 4: Main Gate Keluar",
 					"item": [
+						{
+							"name": "Get Step 4 Detail",
+							"request": {
+								"auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{token}}", "type": "string" }] },
+								"method": "GET",
+								"header": [{ "key": "Accept", "value": "application/json" }],
+								"url": { "raw": "{{base_url}}/vcf/{{vcf_id}}/bagian4", "host": ["{{base_url}}"], "path": ["vcf", "{{vcf_id}}", "bagian4"] }
+							}
+						},
 						{
 							"name": "Submit Step 4 (Final)",
 							"request": {
@@ -743,9 +924,41 @@
 								],
 								"body": {
 									"mode": "raw",
-									"raw": "{\n    \"jam_keluar\": \"17:00\"\n}"
+									"raw": "{\n    \"jam_keluar\": \"17:00\",\n    \"emergency_respon_kontak\": \"081234567890\",\n    \"keterangan\": \"Keterangan tambahan\"\n}"
 								},
 								"url": { "raw": "{{base_url}}/vcf/{{vcf_id}}/bagian4", "host": ["{{base_url}}"], "path": ["vcf", "{{vcf_id}}", "bagian4"] }
+							}
+						},
+						{
+							"name": "Update Step 4",
+							"request": {
+								"auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{token}}", "type": "string" }] },
+								"method": "PUT",
+								"header": [
+									{ "key": "Content-Type", "value": "application/json" },
+									{ "key": "Accept", "value": "application/json" }
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n    \"jam_keluar\": \"18:00\"\n}"
+								},
+								"url": { "raw": "{{base_url}}/vcf/{{vcf_id}}/bagian4", "host": ["{{base_url}}"], "path": ["vcf", "{{vcf_id}}", "bagian4"] }
+							}
+						},
+						{
+							"name": "Finalize Step 4",
+							"request": {
+								"auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{token}}", "type": "string" }] },
+								"method": "POST",
+								"header": [
+									{ "key": "Content-Type", "value": "application/json" },
+									{ "key": "Accept", "value": "application/json" }
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{}"
+								},
+								"url": { "raw": "{{base_url}}/vcf/{{vcf_id}}/finalize", "host": ["{{base_url}}"], "path": ["vcf", "{{vcf_id}}", "finalize"] }
 							}
 						}
 					]
@@ -761,11 +974,11 @@
 		{ "key": "transporter_id", "value": "1", "type": "string" },
 		{ "key": "driver_id", "value": "1", "type": "string" },
 		{ "key": "jenis_kendaraan_id", "value": "1", "type": "string" },
-		{ "key": "logistik_id", "value": "1", "type": "string" },
 		{ "key": "produk_id", "value": "1", "type": "string" },
 		{ "key": "item_id", "value": "1", "type": "string" },
 		{ "key": "item_muatan_id", "value": "1", "type": "string" },
 		{ "key": "item_pemeriksaan_masuk_id", "value": "1", "type": "string" },
-		{ "key": "item_pemeriksaan_keluar_id", "value": "1", "type": "string" }
+		{ "key": "item_pemeriksaan_keluar_id", "value": "1", "type": "string" },
+		{ "key": "setting_key", "value": "vcf.show_produk_lainnya", "type": "string" }
 	]
 }

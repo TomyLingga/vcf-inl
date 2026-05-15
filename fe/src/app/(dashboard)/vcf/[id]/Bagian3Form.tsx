@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { vcfApi, masterApi } from "@/lib/api";
+import { getErrorMessage } from "@/lib/utils";
 
 interface CheckItem {
   id: number;
@@ -11,9 +12,9 @@ interface CheckItem {
   pilihan_jawaban?: string;
   kode?: string;
 }
-interface Props { vcfId: number; canEdit: boolean; vcfData: any; onSuccess: () => void; }
+interface Props { vcfId: number; canEdit: boolean; canFill?: boolean; vcfData: any; onSuccess: () => void; }
 
-export default function Bagian3Form({ vcfId, canEdit, vcfData, onSuccess }: Props) {
+export default function Bagian3Form({ vcfId, canEdit, canFill, vcfData, onSuccess }: Props) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -52,17 +53,17 @@ export default function Bagian3Form({ vcfId, canEdit, vcfData, onSuccess }: Prop
       });
       setPemeriksaan(initial);
     }
-    
+
     if (vcfData.beban_tambahan_keluar) {
       setJenisBeban(vcfData.beban_tambahan_keluar.jenis_beban || "");
     }
-    
+
     if (vcfData.segel_keluar) {
       setJumlahSegel(String(vcfData.segel_keluar.jumlah_segel || ""));
       setNomorSegel(vcfData.segel_keluar.nomor_segel?.map((s: any) => s.nomor_segel) || [""]);
     }
-    
-    setKeteranganUmum(vcfData.vcf_bagian3?.keterangan || vcfData.catatan || "");
+
+    setKeteranganUmum(vcfData.segel_keluar?.keterangan || vcfData.vcf_bagian3?.keterangan || "");
     setIsEditing(true);
   };
 
@@ -121,7 +122,9 @@ export default function Bagian3Form({ vcfId, canEdit, vcfData, onSuccess }: Prop
     setLoading(true);
     try {
       const pemItems = pemeriksaanItems.map((item) => ({
-        item_id: item.id, nilai: pemeriksaan[item.id], keterangan: null,
+        item_id: item.id,
+        nilai: pemeriksaan[item.id],
+        keterangan: null,
       }));
 
       const btkItem = pemeriksaanItems.find(i => i.kode === "BTK");
@@ -147,8 +150,7 @@ export default function Bagian3Form({ vcfId, canEdit, vcfData, onSuccess }: Prop
       router.push("/vcf");
       onSuccess();
     } catch (err: unknown) {
-      const axiosError = err as { response?: { data?: { message?: string } } };
-      setError(axiosError.response?.data?.message || "Gagal menyimpan Bagian 3.");
+      setError(getErrorMessage(err, "Gagal menyimpan Bagian 3."));
     } finally {
       setLoading(false);
     }
@@ -164,14 +166,15 @@ export default function Bagian3Form({ vcfId, canEdit, vcfData, onSuccess }: Prop
       router.push("/vcf");
       onSuccess(); 
     } catch (err: unknown) {
-      const axiosError = err as { response?: { data?: { message?: string } } };
-      setError(axiosError.response?.data?.message || "Gagal reject VCF.");
+      setError(getErrorMessage(err, "Gagal reject VCF."));
     } finally {
       setLoading(false);
     }
   };
 
-  if (!canEdit && !isEditing) {
+  // Show read-only view if data exists and not currently editing
+  const hasExistingData = vcfData.pemeriksaan_keluar && vcfData.pemeriksaan_keluar.length > 0;
+  if (hasExistingData && !isEditing) {
     return (
       <div className="space-y-6">
         {vcfData.status === "reject" && (
@@ -188,8 +191,9 @@ export default function Bagian3Form({ vcfId, canEdit, vcfData, onSuccess }: Prop
         <div className="glass-card overflow-hidden">
           <div className="px-6 py-4 border-b border-border bg-slate-50/50 dark:bg-white/5 flex justify-between items-center">
             <h3 className="font-bold text-text-primary dark:text-white uppercase tracking-wider text-sm">Hasil Pemeriksaan Weighbridge Keluar</h3>
-            {vcfData.status !== 'selesai' && (
-              <button 
+            {/* Only admin can edit existing data */}
+            {canEdit && (
+              <button
                 onClick={handleEdit}
                 className="btn btn-sm btn-secondary flex items-center gap-2"
               >
@@ -236,6 +240,14 @@ export default function Bagian3Form({ vcfId, canEdit, vcfData, onSuccess }: Prop
                     </div>
                   </div>
                 )}
+              </div>
+            )}
+            {vcfData.segel_keluar && (
+              <div className="mt-6 pt-6 border-t border-border">
+                <div className="p-4 rounded-xl bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10">
+                  <p className="form-label text-text-muted">Keterangan</p>
+                  <p className="text-sm text-text-primary dark:text-slate-200">{vcfData.segel_keluar?.keterangan || vcfData.vcf_bagian3?.keterangan || "Tidak ada keterangan"}</p>
+                </div>
               </div>
             )}
           </div>
@@ -416,10 +428,11 @@ export default function Bagian3Form({ vcfId, canEdit, vcfData, onSuccess }: Prop
           })}
         </div>
 
-        <div className="p-6 rounded-2xl bg-slate-50 dark:bg-white/5 border border-slate-100 dark:border-white/5">
-          <label className="form-label">Keterangan Tambahan <span className="text-text-muted font-normal">(Opsional)</span></label>
+        <div className="p-6 rounded-2xl bg-slate-50 dark:bg-white/5 border border-slate-100 dark:border-white/10">
+          <label className="text-[10px] uppercase font-black text-slate-400 tracking-widest mb-3 block">Keterangan Tambahan <span className="text-text-muted font-normal">(Opsional)</span></label>
           <textarea
             className="form-input bg-white dark:bg-white/5 min-h-[100px]"
+            placeholder="Tambahkan catatan jika diperlukan..."
             value={keteranganUmum}
             onChange={(e) => setKeteranganUmum(e.target.value)}
           />

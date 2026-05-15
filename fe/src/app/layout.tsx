@@ -8,7 +8,7 @@ export const metadata: Metadata = {
   keywords: ["VCF", "vehicle control form", "INL", "industri nabati lestari", "keamanan pabrik"],
   authors: [{ name: "PT. Industri Nabati Lestari" }],
   icons: {
-    icon: "/logo.png",
+    icon: "/logo.svg",
   },
 };
 
