@@ -9,6 +9,7 @@ import ImportResultModal from "@/components/ImportResultModal";
 import PrintMasterTable from "@/components/print/PrintMasterTable";
 import DeleteConfirmModal from "@/components/DeleteConfirmModal";
 import { downloadImportTemplate, parseExcelPreview, importDataBatch } from "@/lib/importTemplate";
+import { useToast, ToastContainer } from "@/components/Toast";
 
 interface ChecklistItem {
   id: number;
@@ -19,6 +20,7 @@ interface ChecklistItem {
 }
 
 export default function ChecklistPage() {
+  const { toasts, removeToast, toast } = useToast();
   const [data, setData] = useState<ChecklistItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
@@ -27,6 +29,7 @@ export default function ChecklistPage() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const [isPrinting, setIsPrinting] = useState(false);
+  const [collapsed, setCollapsed] = useState(false);
 
   // Delete Modal State
   const [showDeleteModal, setShowDeleteModal] = useState(false);
@@ -84,9 +87,9 @@ export default function ChecklistPage() {
     setEditing(item);
     setForm({
       nama_item: item.nama_item,
-      keterangan: item.keterangan,
+      keterangan: item.keterangan || "",
       urutan: item.urutan,
-      is_active: item.is_active,
+      is_active: !!item.is_active,
     });
     setError("");
     setShowModal(true);
@@ -96,9 +99,8 @@ export default function ChecklistPage() {
     try {
       await masterApi.updateItemKelengkapanSupir(item.id, { is_active: !item.is_active });
       fetchData();
-    } catch (err: any) {
-      alert(getErrorMessage(err, "Gagal mengubah status."));
-    }
+      toast.success("Status diperbarui", `Status "${item.nama_item}" berhasil diubah.`);
+    } catch (err: any) { toast.error("Gagal mengubah status", getErrorMessage(err, "Terjadi kesalahan.")); }
   };
 
   const handleDeleteClick = (id: number) => {
@@ -111,42 +113,44 @@ export default function ChecklistPage() {
     setDeleting(true);
     try {
       await masterApi.deleteItemKelengkapanSupir(deleteId);
-      setShowDeleteModal(false);
-      fetchData();
+      setShowDeleteModal(false); fetchData();
+      toast.success("Data dihapus", "Item checklist supir berhasil dihapus.");
     } catch (err: any) {
-      alert(getErrorMessage(err, "Gagal menghapus data."));
-    } finally {
-      setDeleting(false);
-      setDeleteId(null);
-    }
+      toast.error("Gagal menghapus", getErrorMessage(err, "Gagal menghapus data."));
+    } finally { setDeleting(false); setDeleteId(null); }
   };
 
   const handleSave = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setSaving(true);
-    setError("");
+    e.preventDefault(); setSaving(true); setError("");
     try {
       const payload = { ...form, keterangan: form.keterangan.trim() || "-" };
       if (editing) {
         await masterApi.updateItemKelengkapanSupir(editing.id, payload);
+        toast.success("Data diperbarui", `Item "${form.nama_item}" berhasil diperbarui.`);
       } else {
         await masterApi.createItemKelengkapanSupir(payload);
+        toast.success("Data disimpan", `Item "${form.nama_item}" berhasil ditambahkan.`);
       }
-      setShowModal(false);
-      fetchData();
+      setShowModal(false); fetchData();
     } catch (err: any) {
-      setError(getErrorMessage(err, "Gagal menyimpan data."));
-    } finally {
-      setSaving(false);
-    }
+      const msg = getErrorMessage(err, "Gagal menyimpan data.");
+      setError(msg);
+      toast.error(editing ? "Gagal memperbarui" : "Gagal menyimpan", msg);
+    } finally { setSaving(false); }
   };
 
   return (
     <div>
+      <ToastContainer toasts={toasts} onRemove={removeToast} />
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
-        <div>
-          <h1 className="page-title">Master Data — Item Checklist Supir</h1>
-          <p className="page-subtitle">Kelola item pemeriksaan kelengkapan supir</p>
+        <div className="flex items-center gap-3">
+          <button onClick={() => setCollapsed(v => !v)} className="w-8 h-8 flex items-center justify-center rounded-lg transition-all hover:bg-white/10" title={collapsed ? "Expand" : "Collapse"} style={{ color: "var(--text-secondary)" }}>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" style={{ transform: collapsed ? "rotate(-90deg)" : "rotate(0deg)", transition: "transform 0.25s" }}><path d="m6 9 6 6 6-6" /></svg>
+          </button>
+          <div>
+            <h1 className="page-title">Master Data — Item Checklist Supir</h1>
+            <p className="page-subtitle">Kelola item pemeriksaan kelengkapan supir</p>
+          </div>
         </div>
         <div className="flex flex-wrap items-center gap-2">
           {/* Import */}
@@ -178,8 +182,6 @@ export default function ChecklistPage() {
                       if (!nama) return null;
                       return {
                         nama_item: nama,
-                        kode: String(row["kode"] ?? "").trim() || "-",
-                        tipe_jawaban: String(row["tipe_jawaban"] ?? "").trim() || "-",
                         keterangan: String(row["keterangan"] ?? "").trim() || "-",
                         urutan: parseInt(String(row["urutan"] ?? "0")) || 0,
                         is_active: String(row["is_active (Ya/Tidak)"] ?? row["is_active"] ?? "Ya").trim().toLowerCase() !== "tidak" ? "Ya" : "Tidak",
@@ -219,6 +221,7 @@ export default function ChecklistPage() {
         </div>
       </div>
 
+      <div style={{ overflow: "hidden", maxHeight: collapsed ? "0px" : "9000px", transition: "max-height 0.4s cubic-bezier(0.4,0,0.2,1)", opacity: collapsed ? 0 : 1 }}>
       <div className="flex flex-wrap gap-4 mb-6">
         <div className="relative flex-1 max-w-md">
           <div className="absolute left-4 top-1/2 -translate-y-1/2 text-secondary pointer-events-none">
@@ -328,6 +331,7 @@ export default function ChecklistPage() {
           </table>
         )}
       </div>
+      </div>
 
       {showModal && (
         <div className="modal-overlay" onClick={() => setShowModal(false)}>
@@ -431,7 +435,7 @@ export default function ChecklistPage() {
           title="Master Data — Item Checklist Supir"
           subtitle="Daftar item pemeriksaan kelengkapan supir sebelum kendaraan masuk area"
           headers={["Urutan", "Nama Item", "Keterangan", "Status"]}
-          data={data.map(i => [i.urutan, i.nama_item, i.keterangan, i.is_active ? 'Aktif' : 'Nonaktif'])}
+          data={data.map(i => [i.urutan, i.nama_item, i.keterangan || "-", i.is_active ? 'Aktif' : 'Nonaktif'])}
           onClose={() => setIsPrinting(false)}
         />
       )}
@@ -445,8 +449,6 @@ export default function ChecklistPage() {
             selectedData,
             (data) => masterApi.createItemKelengkapanSupir({
               nama_item: data.nama_item,
-              kode: data.kode === "-" ? null : data.kode,
-              tipe_jawaban: data.tipe_jawaban === "-" ? null : data.tipe_jawaban,
               keterangan: data.keterangan === "-" ? null : data.keterangan,
               urutan: data.urutan,
               is_active: data.is_active === "Ya"
@@ -466,7 +468,7 @@ export default function ChecklistPage() {
         columns={[
           { key: "urutan", label: "Urutan" },
           { key: "nama_item", label: "Nama Item" },
-          { key: "kode", label: "Kode" },
+          { key: "keterangan", label: "Keterangan" },
           { key: "is_active", label: "Status" },
         ]}
         title="Konfirmasi Import Item Checklist"

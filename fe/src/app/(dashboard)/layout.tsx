@@ -59,7 +59,7 @@ export default function DashboardLayout({
     );
   }
 
-  const sidebarWidth = sidebarCollapsed ? 64 : 130;
+  const sidebarWidth = sidebarCollapsed ? 64 : 256;
 
   return (
     <div className="min-h-screen flex" style={{ background: "var(--bg-primary)" }}>
@@ -74,7 +74,7 @@ export default function DashboardLayout({
 
       {/* Sidebar Wrapper */}
       <div
-        className="fixed inset-y-0 left-0 z-40 lg:relative lg:translate-x-0"
+        className="fixed inset-y-0 left-0 z-40"
         style={{
           transform: isMobile ? (mobileOpen ? "translateX(0)" : "translateX(-100%)") : "translateX(0)",
           transition: "transform 0.3s cubic-bezier(0.4, 0, 0.2, 1)",

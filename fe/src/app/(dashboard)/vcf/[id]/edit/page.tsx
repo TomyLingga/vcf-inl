@@ -8,6 +8,7 @@ import { formatTime, formatDate, isValidTime24h, getErrorMessage } from "@/lib/u
 import { getUser, isAdmin } from "@/lib/auth";
 import { generateQRSignature } from "@/lib/qrUtils";
 import SearchableDropdown from "@/components/SearchableDropdown";
+import { useToast, ToastContainer } from "@/components/Toast";
 
 interface SelectOption { id: number; nama?: string; nama_transporter?: string; nama_supir?: string; nama_item?: string; kode?: string; no_sim?: string; tgl_berlaku_sim?: string; jenis_sim?: string; is_active?: boolean | number | string; }
 interface ChecklistItem { id: number; nama_item: string; urutan: number; is_active?: boolean | number | string; }
@@ -100,7 +101,7 @@ export default function VcfEditPage() {
   const vcfId = Number(params.id);
 
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
+  const { toasts, removeToast, toast } = useToast();
   const [fieldErrors, setFieldErrors] = useState<Record<string, boolean>>({});
   const [validationErrors, setValidationErrors] = useState<ValidationEntry[]>([]);
   const [masterLoading, setMasterLoading] = useState(true);
@@ -139,6 +140,8 @@ export default function VcfEditPage() {
   const [muatanDiisi, setMuatanDiisi] = useState<Record<number, { checked: boolean; nilai: string }>>({});
   const [muatanDibawaLainnya, setMuatanDibawaLainnya] = useState({ checked: false, nilai: "" });
   const [muatanDiisiLainnya, setMuatanDiisiLainnya] = useState({ checked: false, nilai: "" });
+
+  // Deprecated error state effects removed
 
   const parseKeterangan = (raw: string) => {
     if (!raw || raw === "-") return { note: "", dibawa: "", diisi: "" };
@@ -259,7 +262,7 @@ export default function VcfEditPage() {
 
         setMasterProgress(100);
       } catch (err: any) {
-        setError(getErrorMessage(err, "Gagal memuat data VCF."));
+        toast.error("Gagal Memuat", getErrorMessage(err, "Gagal memuat data VCF."));
       } finally {
         setMasterLoading(false);
       }
@@ -317,7 +320,6 @@ export default function VcfEditPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError("");
     setFieldErrors({});
 
     if (!validateForm()) {
@@ -381,9 +383,10 @@ export default function VcfEditPage() {
       };
 
       await vcfApi.updateBagian1(vcfId, payload);
-      router.push(`/vcf/${vcfId}`);
+      toast.success("Berhasil", "Perubahan VCF berhasil disimpan.");
+      setTimeout(() => router.push(`/vcf/${vcfId}`), 1000);
     } catch (err: any) {
-      setError(getErrorMessage(err, "Gagal menyimpan perubahan VCF."));
+      toast.error("Gagal Menyimpan", getErrorMessage(err, "Gagal menyimpan perubahan VCF."));
     } finally {
       setLoading(false);
     }
@@ -424,15 +427,8 @@ export default function VcfEditPage() {
       </div>
 
       <ValidationSummary errors={validationErrors} onDismiss={() => setValidationErrors([])} />
+      <ToastContainer toasts={toasts} onRemove={removeToast} />
 
-      {error && (
-        <div className="mb-6 p-4 rounded-xl flex items-center gap-3 animate-slideDown" style={{ background: "rgba(239,68,68,0.1)", border: "1px solid rgba(239,68,68,0.2)", color: "var(--accent-danger)" }}>
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-            <circle cx="12" cy="12" r="10" /><line x1="12" y1="8" x2="12" y2="12" /><line x1="12" y1="16" x2="12.01" y2="16" />
-          </svg>
-          <span className="font-medium">{error}</span>
-        </div>
-      )}
 
       <form onSubmit={handleSubmit} className="space-y-6">
         {/* SECTION 1: DOKUMEN & LOGISTIK */}
@@ -800,52 +796,90 @@ export default function VcfEditPage() {
               </div>
             )}
 
-            {/* Muatan Diisi - Only shown for LOADING */}
-            {isLoading && (
-              <div>
-                <h3 className="text-sm font-bold uppercase tracking-wider text-slate-400 mb-4">Muatan yang Akan Diisi</h3>
-                <div className="space-y-3">
-                  {muatanItems.filter(m => m.jenis === 'diisi' || m.jenis === 'both').map(m => (
-                    <div key={m.id} className="p-4 rounded-xl border border-slate-100 dark:border-white/5 bg-slate-50/30 dark:bg-white/5">
-                      <div className="flex items-center justify-between">
-                        <span className="font-bold text-text-primary dark:text-slate-300 text-sm">{m.nama_item}</span>
-                        <div className="flex gap-2">
-                          <button type="button" onClick={() => {
-                            const reset: Record<number, { checked: boolean; nilai: string }> = {};
-                            muatanItems.filter(x => x.jenis === 'diisi' || x.jenis === 'both').forEach(x => { reset[x.id] = { checked: true, nilai: "0" }; });
-                            reset[m.id] = { checked: true, nilai: "1" };
-                            setMuatanDiisi(p => ({ ...p, ...reset }));
-                            setMuatanDiisiLainnya({ checked: true, nilai: "0" });
-                          }} className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all ${muatanDiisi[m.id]?.checked && muatanDiisi[m.id]?.nilai !== "0" ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-200' : 'bg-bg-secondary dark:bg-white/10 text-text-muted border border-slate-100 dark:border-white/10'}`}>Ya</button>
-                          <button type="button" onClick={() => setMuatanDiisi(p => ({ ...p, [m.id]: { checked: true, nilai: "0" } }))} className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all ${muatanDiisi[m.id]?.checked && muatanDiisi[m.id]?.nilai === "0" ? 'bg-rose-500 text-white shadow-lg shadow-rose-200' : 'bg-bg-secondary dark:bg-white/10 text-text-muted border border-slate-100 dark:border-white/10'}`}>Tidak</button>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                  {/* Lainnya hardcoded — no master data needed */}
-                  <div className="p-4 rounded-xl border border-dashed border-slate-200 dark:border-white/10 bg-slate-50/10">
+          {/* Muatan Diisi - Only shown for LOADING */}
+          {isLoading && (
+            <div>
+              <h3 className="text-sm font-bold uppercase tracking-wider text-slate-400 mb-4">Muatan yang Akan Diisi</h3>
+              <div className="space-y-3">
+                {muatanItems.filter(m => m.jenis === 'diisi' || m.jenis === 'both').map(m => (
+                  <div key={m.id} className="p-4 rounded-xl border border-slate-100 dark:border-white/5 bg-slate-50/30 dark:bg-white/5">
                     <div className="flex items-center justify-between">
-                      <span className="font-bold text-text-muted text-sm italic">Lainnya</span>
+                      <span className="font-bold text-text-primary dark:text-slate-300 text-sm">{m.nama_item}</span>
                       <div className="flex gap-2">
-                        <button type="button" onClick={() => {
-                          const reset: Record<number, { checked: boolean; nilai: string }> = {};
-                          muatanItems.filter(x => x.jenis === 'diisi' || x.jenis === 'both').forEach(x => { reset[x.id] = { checked: true, nilai: "0" }; });
-                          setMuatanDiisi(p => ({ ...p, ...reset }));
-                          // Preserve existing value if switching from "Tidak" to "Ya", otherwise keep empty
-                          setMuatanDiisiLainnya(prev => ({ checked: true, nilai: prev.nilai === "0" ? "" : prev.nilai }));
-                        }} className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all ${muatanDiisiLainnya.checked && muatanDiisiLainnya.nilai !== "0" ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-200' : (muatanDiisiLainnya.checked ? 'bg-blue-500 text-white shadow-lg shadow-blue-200' : 'bg-bg-secondary dark:bg-white/10 text-text-muted border border-slate-100 dark:border-white/10')}`}>Ya</button>
-                        <button type="button" onClick={() => setMuatanDiisiLainnya({ checked: false, nilai: "0" })} className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all ${!muatanDiisiLainnya.checked ? 'bg-rose-500 text-white shadow-lg shadow-rose-200' : 'bg-bg-secondary dark:bg-white/10 text-text-muted border border-slate-100 dark:border-white/10'}`}>Tidak</button>
+                        <button type="button"
+                          onClick={() => {
+                            const reset: Record<number, { checked: boolean; nilai: string }> = {};
+                            muatanItems.filter(x => x.jenis === 'diisi' || x.jenis === 'both')
+                              .forEach(x => { reset[x.id] = { checked: true, nilai: "0" }; });
+                            reset[m.id] = { checked: true, nilai: "1" };
+                            setMuatanDiisi(reset);
+                            setMuatanDiisiLainnya({ checked: false, nilai: "0" });
+                          }}
+                          className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all ${
+                            muatanDiisi[m.id]?.nilai === "1"
+                              ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-200'
+                              : 'bg-bg-secondary dark:bg-white/10 text-text-muted border border-slate-100 dark:border-white/10'
+                          }`}>Ya</button>
+
+                        <button type="button"
+                          onClick={() => {
+                            setMuatanDiisi(p => ({ ...p, [m.id]: { checked: true, nilai: "0" } }));
+                          }}
+                          className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all ${
+                            muatanDiisi[m.id] !== undefined && muatanDiisi[m.id]?.nilai === "0"
+                              ? 'bg-rose-500 text-white shadow-lg shadow-rose-200'
+                              : 'bg-bg-secondary dark:bg-white/10 text-text-muted border border-slate-100 dark:border-white/10'
+                          }`}>Tidak</button>
                       </div>
                     </div>
-                    {muatanDiisiLainnya.checked && (
-                      <div className="mt-2">
-                        <input type="text" className="form-input text-xs" placeholder="Sebutkan muatan lainnya..." value={muatanDiisiLainnya.nilai} onChange={(e) => setMuatanDiisiLainnya({ checked: true, nilai: e.target.value })} />
-                      </div>
-                    )}
                   </div>
+                ))}
+
+                {/* Lainnya */}
+                <div className="p-4 rounded-xl border border-dashed border-slate-200 dark:border-white/10 bg-slate-50/10">
+                  <div className="flex items-center justify-between">
+                    <span className="font-bold text-text-muted text-sm italic">Lainnya</span>
+                    <div className="flex gap-2">
+                      <button type="button"
+                        onClick={() => {
+                          const reset: Record<number, { checked: boolean; nilai: string }> = {};
+                          muatanItems.filter(x => x.jenis === 'diisi' || x.jenis === 'both')
+                            .forEach(x => { reset[x.id] = { checked: true, nilai: "0" }; });
+                          setMuatanDiisi(reset);
+                          setMuatanDiisiLainnya(prev => ({
+                            checked: true,
+                            nilai: prev.nilai && prev.nilai !== "0" ? prev.nilai : "",
+                          }));
+                        }}
+                        className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all ${
+                          muatanDiisiLainnya.checked
+                            ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-200'
+                            : 'bg-bg-secondary dark:bg-white/10 text-text-muted border border-slate-100 dark:border-white/10'
+                        }`}>Ya</button>
+
+                      <button type="button"
+                        onClick={() => setMuatanDiisiLainnya({ checked: false, nilai: "0" })}
+                        className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all ${
+                          !muatanDiisiLainnya.checked
+                            ? 'bg-rose-500 text-white shadow-lg shadow-rose-200'
+                            : 'bg-bg-secondary dark:bg-white/10 text-text-muted border border-slate-100 dark:border-white/10'
+                        }`}>Tidak</button>
+                    </div>
+                  </div>
+                  {muatanDiisiLainnya.checked && (
+                    <div className="mt-2">
+                      <input type="text" className="form-input text-xs"
+                        placeholder="Sebutkan muatan lainnya..."
+                        value={muatanDiisiLainnya.nilai}
+                        onChange={(e) => setMuatanDiisiLainnya({ checked: true, nilai: e.target.value })} />
+                    </div>
+                  )}
                 </div>
               </div>
-            )}
+            </div>
+          )}
+
+
           </div>
         </div>
         }

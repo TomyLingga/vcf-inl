@@ -4,10 +4,6 @@ namespace App\Http\Controllers\API\VCF;
 
 use App\Http\Controllers\Controller;
 
-
-
-
-
 use App\Models\Driver;
 use App\Models\JenisKendaraan;
 use App\Models\Transporter;
@@ -197,6 +193,17 @@ class VcfBagian1Controller extends Controller
 
         DB::beginTransaction();
         try {
+
+            $existingRecord = Vcf::where('no_polisi', $validated['no_polisi'])
+                                ->whereNotIn('status', ['selesai', 'reject'])
+                                ->first();
+
+            if ($existingRecord) {
+                return response()->json([
+                    'message' => 'No polisi sudah terdaftar dan belum selesai atau reject.',
+                ], 422);
+            }
+            
             $tanggalVcf = $validated['tanggal'];
             $date = \Carbon\Carbon::parse($tanggalVcf);
             

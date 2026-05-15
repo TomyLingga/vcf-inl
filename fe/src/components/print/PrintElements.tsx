@@ -9,6 +9,13 @@ import QRCode from "react-qr-code";
 ───────────────────────────────────────────── */
 export const PRINT_STYLES = {
   CELL: { border: "1px solid #000", padding: "2px 5px", fontSize: "8.5px", verticalAlign: "top" } as React.CSSProperties,
+  CELL_CENTER: {
+    border: "1px solid #000",
+    padding: "2px 5px",
+    fontSize: "8.5px",
+    verticalAlign: "middle",
+    textAlign: "center",
+  } as React.CSSProperties,
   HDR: { border: "1px solid #000", padding: "3px 8px", fontSize: "9px", fontWeight: "bold", background: "#dcdcdc", textTransform: "uppercase" } as React.CSSProperties,
   SUB_HDR: { border: "1px solid #000", padding: "2px 8px", fontSize: "8.5px", fontWeight: "bold", background: "#f0f0f0" } as React.CSSProperties,
 };
@@ -91,9 +98,9 @@ export const QRCodeSign = ({ nama, timestamp, label }: { nama?: string; timestam
 
   const formattedTime = timestamp
     ? new Date(timestamp).toLocaleString("id-ID", {
-        day: "2-digit", month: "2-digit", year: "numeric",
-        hour: "2-digit", minute: "2-digit",
-      })
+      day: "2-digit", month: "2-digit", year: "numeric",
+      hour: "2-digit", minute: "2-digit",
+    })
     : null;
 
   const qrValue = `Verified: ${nama}${formattedTime ? " | " + formattedTime : ""}`;

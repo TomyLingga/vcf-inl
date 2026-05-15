@@ -57,6 +57,21 @@ const getActionLabel = (status: string) => {
   return map[status] ?? "Detail";
 };
 
+const getActionButtonStyle = (status: string) => {
+  switch (status) {
+    case "bagian1_selesai": return "border-amber-500 text-amber-500 hover:bg-amber-500 hover:text-white shadow-sm hover:shadow-amber-500/20";
+    case "bagian2_selesai": return "border-indigo-500 text-indigo-500 hover:bg-indigo-500 hover:text-white shadow-sm hover:shadow-indigo-500/20";
+    case "loading_unloading_proses": 
+    case "loading_unloading_selesai": return "border-violet-500 text-violet-500 hover:bg-violet-500 hover:text-white shadow-sm hover:shadow-violet-500/20";
+    case "bagian3_selesai": return "border-emerald-500 text-emerald-500 hover:bg-emerald-500 hover:text-white shadow-sm hover:shadow-emerald-500/20";
+    case "selesai":
+    case "reject":
+        return "border-slate-300 text-slate-500 hover:bg-slate-500 hover:text-white dark:border-white/20 dark:text-slate-400 dark:hover:bg-white/20 dark:hover:text-white";
+    default:
+        return "border-blue-500 text-blue-500 hover:bg-blue-500 hover:text-white shadow-sm hover:shadow-blue-500/20";
+  }
+};
+
 // Skeleton Components
 function TableRowSkeleton() {
   return (
@@ -114,9 +129,10 @@ export default function VcfQuickAccessPage() {
         search: debouncedSearch,
         per_page: 15
       });
-      setVcfs(res.data.data || res.data);
+      const items = res.data.data || res.data;
+      setVcfs(items.filter((v: VcfSummary) => v.status !== "selesai" && v.status !== "reject"));
     } catch {
-      // ignore
+      
     } finally {
       setLoading(false);
     }
@@ -354,8 +370,7 @@ export default function VcfQuickAccessPage() {
                       <td>
                         <Link
                           href={`/vcf/${vcf.id}`}
-                          className={`btn btn-sm font-bold text-[10px] uppercase ${vcf.status === "selesai" || vcf.status === "reject" ? "btn-secondary" : "btn-primary"
-                            }`}
+                          className={`flex items-center justify-center rounded-xl px-4 py-2 text-[10px] font-black uppercase tracking-widest transition-all border-2 ${getActionButtonStyle(vcf.status)}`}
                         >
                           {getActionLabel(vcf.status)}
                         </Link>

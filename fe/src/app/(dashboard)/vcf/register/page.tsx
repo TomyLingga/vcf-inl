@@ -9,6 +9,7 @@ import { getUser } from "@/lib/auth";
 import { generateQRSignature } from "@/lib/qrUtils";
 import GuideSection from "@/components/GuideSection";
 import SearchableDropdown from "@/components/SearchableDropdown";
+import { useToast, ToastContainer } from "@/components/Toast";
 
 interface SelectOption { id: number; nama?: string; nama_transporter?: string; nama_supir?: string; nama_item?: string; kode?: string; no_sim?: string; tgl_berlaku_sim?: string; jenis_sim?: string; is_active?: boolean | number | string; }
 interface ChecklistItem { id: number; nama_item: string; urutan: number; is_active?: boolean | number | string; }
@@ -25,45 +26,87 @@ interface ValidationEntry {
 }
 
 function ValidationSummary({ errors, onDismiss }: { errors: ValidationEntry[]; onDismiss: () => void }) {
+  const [leaving, setLeaving] = useState(false);
+
+  useEffect(() => {
+    if (errors.length === 0) { setLeaving(false); return; }
+    const leaveTimer = setTimeout(() => setLeaving(true), 6500);
+    const clearTimer = setTimeout(() => onDismiss(), 7000);
+    return () => { clearTimeout(leaveTimer); clearTimeout(clearTimer); };
+  }, [errors]);
+
+  const handleDismiss = () => {
+    setLeaving(true);
+    setTimeout(() => onDismiss(), 500);
+  };
+
   if (errors.length === 0) return null;
+
   const sections = Array.from(new Set(errors.map(e => e.section)));
   const scrollTo = (fieldId: string) => {
     const el = document.getElementById(fieldId) || document.querySelector(`[data-field-id="${fieldId}"]`);
     el?.scrollIntoView({ behavior: "smooth", block: "center" });
     (el as HTMLElement)?.focus?.();
   };
+
   return (
-    <div className="mb-6 rounded-2xl border border-amber-400/30 bg-amber-50/80 dark:bg-amber-900/10 backdrop-blur-sm overflow-hidden animate-slideDown">
-      <div className="flex items-center justify-between px-5 py-3 border-b border-amber-400/20">
+    <div
+      className="fixed top-4 right-4 z-50 w-80 rounded-2xl shadow-xl overflow-hidden"
+      style={{
+        background: "rgba(251,191,36,0.95)",
+        border: "1px solid rgba(251,191,36,0.3)",
+        backdropFilter: "blur(8px)",
+        animation: leaving
+          ? "slideOutRight 0.5s ease-in forwards"
+          : "slideInRight 0.4s cubic-bezier(0.34,1.56,0.64,1) forwards",
+      }}
+    >
+      {/* Header */}
+      <div className="flex items-center justify-between px-4 py-3 border-b border-amber-300/40">
         <div className="flex items-center gap-2">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="text-amber-500 shrink-0">
-            <path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z" /><line x1="12" y1="9" x2="12" y2="13" /><line x1="12" y1="17" x2="12.01" y2="17" />
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" className="shrink-0">
+            <path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z" />
+            <line x1="12" y1="9" x2="12" y2="13" /><line x1="12" y1="17" x2="12.01" y2="17" />
           </svg>
-          <span className="text-sm font-bold text-amber-700 dark:text-amber-400">{errors.length} field belum lengkap</span>
+          <span className="text-sm font-bold text-white">{errors.length} field belum lengkap</span>
         </div>
-        <button onClick={onDismiss} className="text-amber-500 hover:text-amber-700 transition-colors p-1 rounded-lg hover:bg-amber-100 dark:hover:bg-amber-900/30">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M18 6 6 18M6 6l12 12" /></svg>
+        <button onClick={handleDismiss} className="text-white/70 hover:text-white transition-colors p-1 rounded-lg hover:bg-white/10">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+            <path d="M18 6 6 18M6 6l12 12" />
+          </svg>
         </button>
       </div>
-      <div className="px-5 py-3 space-y-2">
+
+      {/* Body */}
+      <div className="px-4 py-3 space-y-2 max-h-60 overflow-y-auto">
         {sections.map(section => (
           <div key={section}>
-            <p className="text-[10px] font-bold uppercase tracking-wider text-amber-600/70 dark:text-amber-400/70 mb-1">{section}</p>
-            <div className="flex flex-wrap gap-2">
+            <p className="text-[10px] font-bold uppercase tracking-wider text-white/60 mb-1">{section}</p>
+            <div className="flex flex-wrap gap-1.5">
               {errors.filter(e => e.section === section).map(e => (
                 <button
                   key={e.key}
                   type="button"
                   onClick={() => scrollTo(e.fieldId)}
-                  className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-medium bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300 hover:bg-amber-200 dark:hover:bg-amber-900/50 transition-colors border border-amber-300/40"
+                  className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-medium bg-white/20 hover:bg-white/30 text-white transition-colors border border-white/20"
                 >
                   {e.label}
-                  <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M5 12h14M12 5l7 7-7 7" /></svg>
+                  <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                    <path d="M5 12h14M12 5l7 7-7 7" />
+                  </svg>
                 </button>
               ))}
             </div>
           </div>
         ))}
+      </div>
+
+      {/* Progress bar auto-dismiss */}
+      <div className="h-0.5 bg-white/20">
+        <div
+          className="h-full bg-white/60"
+          style={{ animation: "shrinkWidth 7s linear forwards" }}
+        />
       </div>
     </div>
   );
@@ -92,8 +135,10 @@ function SectionSkeleton({ title }: { title: string }) {
 export default function VcfRegisterPage() {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
+  const { toasts, removeToast, toast } = useToast();
   const [fieldErrors, setFieldErrors] = useState<Record<string, boolean>>({});
+
+
   const [validationErrors, setValidationErrors] = useState<ValidationEntry[]>([]);
   const [masterLoading, setMasterLoading] = useState(true);
   const [masterProgress, setMasterProgress] = useState(0);
@@ -136,8 +181,12 @@ export default function VcfRegisterPage() {
   const applyMasterData = (data: ReturnType<typeof getCachedMasterData>) => {
     if (!data) return;
     setTransporters(data.transporters);
-    setAllDrivers(data.drivers);
-    setDrivers(data.drivers);
+    const mappedDrivers = (data.drivers || []).map((d: any) => ({
+      ...d,
+      display_name: d.no_sim ? `${d.nama_supir} - ${d.no_sim}` : d.nama_supir
+    }));
+    setAllDrivers(mappedDrivers);
+    setDrivers(mappedDrivers);
     setShowProdukLainnya(data.showProdukLainnya);
     setProdukOptions(data.produkOptions);
     setJenisKendaraan(data.jenisKendaraan);
@@ -238,7 +287,6 @@ export default function VcfRegisterPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError("");
     setFieldErrors({});
 
     // Client-side validation
@@ -307,14 +355,15 @@ export default function VcfRegisterPage() {
 
       const res = await vcfApi.createBagian1(payload);
       const vcfId = res.data.data?.id || res.data.id;
+      
+      toast.success("Registrasi Berhasil", "Data VCF telah didaftarkan ke sistem.");
+      
       const user = getUser();
-      if (user?.role === "petugas") {
+      setTimeout(() => {
         router.push("/vcf");
-      } else {
-        router.push("/dashboard");
-      }
+      }, 1000);
     } catch (err: any) {
-      setError(getErrorMessage(err, "Gagal menyimpan VCF."));
+      toast.error("Registrasi Gagal", getErrorMessage(err, "Gagal menyimpan VCF."));
     } finally {
       setLoading(false);
     }
@@ -374,15 +423,8 @@ export default function VcfRegisterPage() {
       )}
 
       <ValidationSummary errors={validationErrors} onDismiss={() => setValidationErrors([])} />
+      <ToastContainer toasts={toasts} onRemove={removeToast} />
 
-      {error && (
-        <div className="mb-6 p-4 rounded-xl flex items-center gap-3 animate-slideDown" style={{ background: "rgba(239,68,68,0.1)", border: "1px solid rgba(239,68,68,0.2)", color: "var(--accent-danger)" }}>
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-            <circle cx="12" cy="12" r="10" /><line x1="12" y1="8" x2="12" y2="12" /><line x1="12" y1="16" x2="12.01" y2="16" />
-          </svg>
-          <span className="font-medium">{error}</span>
-        </div>
-      )}
 
       <form onSubmit={handleSubmit} className="space-y-6">
         {/* SECTION 1: DOKUMEN & LOGISTIK */}
@@ -578,7 +620,7 @@ export default function VcfRegisterPage() {
                     onChange={setDriverId}
                     placeholder="Pilih Supir"
                     required
-                    displayField="nama_supir"
+                    displayField="display_name"
                   />
                 </div>
                 <div>
@@ -723,7 +765,15 @@ export default function VcfRegisterPage() {
                           <span className="font-bold text-text-primary dark:text-slate-300 text-sm">{m.nama_item}</span>
                           <div className="flex gap-2">
                             <button type="button" onClick={() => {
-                              setMuatanDibawa(p => ({ ...p, [m.id]: { checked: true, nilai: "1" } }));
+                              setMuatanDibawa(p => {
+                                const newState: Record<number, { checked: boolean; nilai: string }> = {};
+                                Object.keys(p).forEach(k => {
+                                  newState[parseInt(k)] = { checked: true, nilai: "0" };
+                                });
+                                newState[m.id] = { checked: true, nilai: "1" };
+                                return newState;
+                              });
+                              setMuatanDibawaLainnya({ checked: true, nilai: "0" });
                             }} className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all ${muatanDibawa[m.id]?.checked && muatanDibawa[m.id]?.nilai !== "0" ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-200' : 'bg-bg-secondary dark:bg-white/10 text-text-muted border border-slate-100 dark:border-white/10'}`}>Ya</button>
                             <button type="button" onClick={() => setMuatanDibawa(p => ({ ...p, [m.id]: { checked: true, nilai: "0" } }))} className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all ${muatanDibawa[m.id]?.checked && muatanDibawa[m.id]?.nilai === "0" ? 'bg-rose-500 text-white shadow-lg shadow-rose-200' : 'bg-bg-secondary dark:bg-white/10 text-text-muted border border-slate-100 dark:border-white/10'}`}>Tidak</button>
                           </div>
@@ -737,6 +787,13 @@ export default function VcfRegisterPage() {
                           <span className="font-bold text-text-muted text-sm italic">Lainnya</span>
                           <div className="flex gap-2">
                             <button type="button" onClick={() => {
+                              setMuatanDibawa(p => {
+                                const newState: Record<number, { checked: boolean; nilai: string }> = {};
+                                Object.keys(p).forEach(k => {
+                                  newState[parseInt(k)] = { checked: true, nilai: "0" };
+                                });
+                                return newState;
+                              });
                               setMuatanDibawaLainnya(prev => ({ checked: true, nilai: prev.nilai === "0" ? "" : prev.nilai }));
                             }} className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all ${muatanDibawaLainnya.checked && muatanDibawaLainnya.nilai !== "0" ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-200' : 'bg-bg-secondary dark:bg-white/10 text-text-muted border border-slate-100 dark:border-white/10'}`}>Ya</button>
                             <button type="button" onClick={() => setMuatanDibawaLainnya({ checked: true, nilai: "0" })} className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all ${muatanDibawaLainnya.checked && muatanDibawaLainnya.nilai === "0" ? 'bg-rose-500 text-white shadow-lg shadow-rose-200' : 'bg-bg-secondary dark:bg-white/10 text-text-muted border border-slate-100 dark:border-white/10'}`}>Tidak</button>
@@ -764,7 +821,15 @@ export default function VcfRegisterPage() {
                           <span className="font-bold text-text-primary dark:text-slate-300 text-sm">{m.nama_item}</span>
                           <div className="flex gap-2">
                             <button type="button" onClick={() => {
-                              setMuatanDiisi(p => ({ ...p, [m.id]: { checked: true, nilai: "1" } }));
+                              setMuatanDiisi(p => {
+                                const newState: Record<number, { checked: boolean; nilai: string }> = {};
+                                Object.keys(p).forEach(k => {
+                                  newState[parseInt(k)] = { checked: true, nilai: "0" };
+                                });
+                                newState[m.id] = { checked: true, nilai: "1" };
+                                return newState;
+                              });
+                              setMuatanDiisiLainnya({ checked: true, nilai: "0" });
                             }} className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all ${muatanDiisi[m.id]?.checked && muatanDiisi[m.id]?.nilai !== "0" ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-200' : 'bg-bg-secondary dark:bg-white/10 text-text-muted border border-slate-100 dark:border-white/10'}`}>Ya</button>
                             <button type="button" onClick={() => setMuatanDiisi(p => ({ ...p, [m.id]: { checked: true, nilai: "0" } }))} className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all ${muatanDiisi[m.id]?.checked && muatanDiisi[m.id]?.nilai === "0" ? 'bg-rose-500 text-white shadow-lg shadow-rose-200' : 'bg-bg-secondary dark:bg-white/10 text-text-muted border border-slate-100 dark:border-white/10'}`}>Tidak</button>
                           </div>
@@ -777,6 +842,13 @@ export default function VcfRegisterPage() {
                         <span className="font-bold text-text-muted text-sm italic">Lainnya</span>
                         <div className="flex gap-2">
                           <button type="button" onClick={() => {
+                            setMuatanDiisi(p => {
+                              const newState: Record<number, { checked: boolean; nilai: string }> = {};
+                              Object.keys(p).forEach(k => {
+                                newState[parseInt(k)] = { checked: true, nilai: "0" };
+                              });
+                              return newState;
+                            });
                             setMuatanDiisiLainnya(prev => ({ checked: true, nilai: prev.nilai === "0" ? "" : prev.nilai }));
                           }} className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all ${muatanDiisiLainnya.checked && muatanDiisiLainnya.nilai !== "0" ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-200' : 'bg-bg-secondary dark:bg-white/10 text-text-muted border border-slate-100 dark:border-white/10'}`}>Ya</button>
                           <button type="button" onClick={() => setMuatanDiisiLainnya({ checked: true, nilai: "0" })} className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all ${muatanDiisiLainnya.checked && muatanDiisiLainnya.nilai === "0" ? 'bg-rose-500 text-white shadow-lg shadow-rose-200' : 'bg-bg-secondary dark:bg-white/10 text-text-muted border border-slate-100 dark:border-white/10'}`}>Tidak</button>

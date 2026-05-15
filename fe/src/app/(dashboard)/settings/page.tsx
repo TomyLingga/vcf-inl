@@ -49,19 +49,39 @@ function saveAppearance(data: object) {
 
 const GROUP_META: Record<string, { label: string; icon: React.ReactNode; desc: string }> = {
   general: {
-    label: "Umum",
-    desc: "Pengaturan umum sistem",
-    icon: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="3"/><path d="M12 1v4M12 19v4M4.22 4.22l2.83 2.83M16.95 16.95l2.83 2.83M1 12h4M19 12h4M4.22 19.78l2.83-2.83M16.95 7.05l2.83-2.83"/></svg>,
+    label: "Sistem & Aplikasi",
+    desc: "Nama aplikasi, zona waktu, dan konfigurasi dasar sistem",
+    icon: (
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+        <rect x="2" y="3" width="20" height="14" rx="2" />
+        <line x1="8" y1="21" x2="16" y2="21" />
+        <line x1="12" y1="17" x2="12" y2="21" />
+      </svg>
+    ),
   },
   vcf: {
-    label: "VCF & Formulir",
-    desc: "Konfigurasi formulir registrasi VCF",
-    icon: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>,
+    label: "Alur Kerja VCF",
+    desc: "Validasi registrasi, opsi produk, dan tanda tangan digital",
+    icon: (
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+        <polyline points="14 2 14 8 20 8" />
+        <line x1="16" y1="13" x2="8" y2="13" />
+        <line x1="16" y1="17" x2="8" y2="17" />
+        <polyline points="10 9 9 9 8 9" />
+      </svg>
+    ),
   },
   print: {
-    label: "Cetak & Laporan",
-    desc: "Pengaturan format cetak dokumen",
-    icon: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>,
+    label: "Dokumen & Cetak",
+    desc: "Kop surat, alamat, footer, dan tipografi laporan cetak",
+    icon: (
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+        <polyline points="6 9 6 2 18 2 18 9" />
+        <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2" />
+        <rect x="6" y="14" width="12" height="8" />
+      </svg>
+    ),
   },
 };
 
@@ -216,13 +236,18 @@ export default function SettingsPage() {
     const disabled = saving === setting.key;
     if (setting.type === "boolean") {
       return (
-        <button
-          onClick={() => handleUpdate(setting.key, !setting.value)}
-          disabled={disabled}
-          className={`relative inline-flex h-6 w-11 flex-shrink-0 items-center rounded-full transition-colors focus:outline-none ${setting.value ? "bg-emerald-500" : "bg-slate-200 dark:bg-slate-700"} ${disabled ? "opacity-50 cursor-not-allowed" : "cursor-pointer"}`}
-        >
-          <span className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${setting.value ? "translate-x-6" : "translate-x-1"}`} />
-        </button>
+        <div className="flex items-center gap-3">
+          <span className={`text-[10px] font-bold uppercase tracking-wider ${setting.value ? "text-emerald-500" : "text-slate-400"}`}>
+            {setting.value ? "Aktif" : "Nonaktif"}
+          </span>
+          <button
+            onClick={() => handleUpdate(setting.key, !setting.value)}
+            disabled={disabled}
+            className={`relative inline-flex h-6 w-11 flex-shrink-0 items-center rounded-full transition-all duration-300 focus:outline-none ${setting.value ? "bg-emerald-500 shadow-md shadow-emerald-500/20" : "bg-slate-200 dark:bg-slate-700"} ${disabled ? "opacity-50 cursor-not-allowed" : "cursor-pointer"}`}
+          >
+            <span className={`inline-block h-4 w-4 transform rounded-full bg-white shadow-sm transition-transform duration-300 ${setting.value ? "translate-x-6" : "translate-x-1"}`} />
+          </button>
+        </div>
       );
     }
     return <SettingTextInput setting={setting} onUpdate={handleUpdate} saving={disabled} />;
@@ -255,9 +280,9 @@ export default function SettingsPage() {
       )}
 
       {/* Header */}
-      <div className="mb-6">
-        <h1 className="page-title text-2xl">Pengaturan</h1>
-        <p className="page-subtitle">Konfigurasi sistem dan tampilan aplikasi VCF</p>
+      <div className="mb-8 p-6 rounded-2xl bg-gradient-to-r from-accent-primary/10 to-transparent border border-accent-primary/20">
+        <h1 className="page-title text-3xl font-extrabold tracking-tight" style={{ color: "var(--text-primary)" }}>Pengaturan</h1>
+        <p className="page-subtitle text-lg font-medium" style={{ color: "var(--text-muted)" }}>Konfigurasi alur kerja, dokumen cetak, dan preferensi visual aplikasi VCF</p>
       </div>
 
       {/* Tabs */}
@@ -299,14 +324,14 @@ export default function SettingsPage() {
                 </div>
                 <div className="divide-y" style={{ borderColor: "var(--border)" }}>
                   {groupSettings.map(setting => (
-                    <div key={setting.key} className="px-6 py-4 flex flex-col md:flex-row md:items-center justify-between gap-4">
+                    <div key={setting.key} className="px-6 py-5 flex flex-col md:flex-row md:items-center justify-between gap-4 transition-colors hover:bg-slate-50/50 dark:hover:bg-white/5">
                       <div className="flex-1 min-w-0">
-                        <p className="text-sm font-semibold" style={{ color: "var(--text-primary)" }}>{setting.label}</p>
-                        {setting.description && <p className="text-xs mt-0.5" style={{ color: "var(--text-muted)" }}>{setting.description}</p>}
+                        <p className="text-sm font-bold" style={{ color: "var(--text-primary)" }}>{setting.label}</p>
+                        {setting.description && <p className="text-xs mt-1 leading-relaxed" style={{ color: "var(--text-muted)" }}>{setting.description}</p>}
                       </div>
-                      <div className="flex items-center gap-2 flex-shrink-0">
+                      <div className="flex items-center gap-3 flex-shrink-0">
                         {renderInput(setting)}
-                        {saving === setting.key && <div className="spinner w-4 h-4 flex-shrink-0" />}
+                        {saving === setting.key && <div className="spinner-accent w-4 h-4 flex-shrink-0" />}
                       </div>
                     </div>
                   ))}
@@ -487,16 +512,16 @@ function SettingTextInput({ setting, onUpdate, saving }: { setting: Setting; onU
 
   const onKeyDown = (e: React.KeyboardEvent) => { if (e.key === "Enter" && !e.shiftKey) (e.target as HTMLElement).blur(); };
 
-  if (setting.key === "print.company_address") {
+  if (setting.key === "print.company_address" || setting.key === "print.footer_text") {
     return (
       <textarea
         value={localValue}
         onChange={e => setLocalValue(e.target.value)}
         onBlur={commit}
         disabled={saving}
-        rows={3}
-        placeholder="Masukkan alamat perusahaan..."
-        className="form-input w-72 text-sm leading-relaxed resize-none"
+        rows={setting.key === "print.footer_text" ? 2 : 3}
+        placeholder={`Masukkan ${setting.label.toLowerCase()}...`}
+        className="form-input w-80 text-sm leading-relaxed resize-none focus:ring-2 focus:ring-accent-primary/20"
       />
     );
   }

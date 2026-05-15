@@ -4,6 +4,8 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { vcfApi } from "@/lib/api";
 import { formatTime, isValidTime24h, getErrorMessage } from "@/lib/utils";
+import { useToast, ToastContainer } from "@/components/Toast";
+
 
 interface VcfData {
   nomor_urut: string;
@@ -30,6 +32,7 @@ export default function Bagian4Form({ vcfId, canEdit, canFill, vcfData, onSucces
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const { toasts, removeToast, toast } = useToast();
   const [fieldErrors, setFieldErrors] = useState<{ jamKeluar?: boolean; emergencyKontak?: boolean; keterangan?: boolean }>({});
   const [jamKeluar, setJamKeluar] = useState("");
   const [emergencyKontak, setEmergencyKontak] = useState("");
@@ -40,12 +43,18 @@ export default function Bagian4Form({ vcfId, canEdit, canFill, vcfData, onSucces
   // Pre-fill data if available
   useEffect(() => {
     if (vcfData.vcf_keluar) {
-      setJamKeluar(vcfData.vcf_keluar.jam_keluar || "");
+      const timeVal = vcfData.vcf_keluar.jam_keluar || "";
+      let formattedTime = timeVal.substring(0, 5);
+      if (timeVal.includes(":")) {
+        const parts = timeVal.split(":");
+        formattedTime = `${parts[0].padStart(2, "0")}:${parts[1].padStart(2, "0")}`.substring(0, 5);
+      }
+      setJamKeluar(formattedTime);
       setEmergencyKontak(vcfData.vcf_keluar.emergency_respon_kontak || "");
       setKeterangan(vcfData.vcf_keluar.keterangan || "");
       // If data exists and still before finalization, default to view mode (not editing)
       setIsEditing(false);
-    } else if (canEdit && !jamKeluar) {
+    } else if (canEdit) {
       setJamKeluar(formatTime());
     }
   }, [vcfData, canEdit]);
@@ -95,9 +104,15 @@ export default function Bagian4Form({ vcfId, canEdit, canFill, vcfData, onSucces
     setLoading(true);
     setError("");
     try {
-      // 1. Simpan data Bagian 4 (Jam Keluar) jika belum weighbridge_keluar
-      if (vcfData.status === "bagian3_selesai") {
+      // 1. Simpan/Update data Bagian 4 (Jam Keluar)
+      if (!vcfData.vcf_keluar) {
         await vcfApi.createBagian4(vcfId, {
+          jam_keluar: jamKeluar,
+          emergency_respon_kontak: emergencyKontak,
+          keterangan: keterangan,
+        });
+      } else {
+        await vcfApi.updateBagian4(vcfId, {
           jam_keluar: jamKeluar,
           emergency_respon_kontak: emergencyKontak,
           keterangan: keterangan,
@@ -107,10 +122,11 @@ export default function Bagian4Form({ vcfId, canEdit, canFill, vcfData, onSucces
       // 2. Langsung Finalisasi (Keluar Main Gate)
       await vcfApi.finalizeVcf(vcfId);
 
+      toast.success("VCF Selesai", "Kendaraan telah dikonfirmasi keluar dari Main Gate.");
       onSuccess();
-      router.push("/vcf");
+      setTimeout(() => router.push(`/vcf/${vcfId}`), 1000);
     } catch (err: unknown) {
-      setError(getErrorMessage(err, "Gagal memproses finalisasi VCF."));
+      toast.error("Gagal", getErrorMessage(err, "Gagal memproses finalisasi VCF."));
       setShowConfirm(false);
     } finally {
       setLoading(false);
@@ -126,10 +142,11 @@ export default function Bagian4Form({ vcfId, canEdit, canFill, vcfData, onSucces
         emergency_respon_kontak: emergencyKontak,
         keterangan: keterangan,
       });
+      toast.success("Berhasil", "Data Bagian 4 berhasil diperbarui.");
       setIsEditing(false);
       onSuccess();
     } catch (err: unknown) {
-      setError(getErrorMessage(err, "Gagal memperbarui Bagian 4."));
+      toast.error("Gagal", getErrorMessage(err, "Gagal memperbarui Bagian 4."));
     } finally {
       setLoading(false);
     }
@@ -148,7 +165,7 @@ export default function Bagian4Form({ vcfId, canEdit, canFill, vcfData, onSucces
               <div className="p-6 rounded-2xl bg-emerald-500/5 border border-emerald-500/10">
                 <p className="text-[10px] uppercase font-bold text-emerald-500/60 tracking-widest mb-2">Waktu Keluar</p>
                 <p className="text-3xl font-black text-emerald-400 font-mono">
-                  {vcfData.vcf_keluar?.jam_keluar || "—"} <span className="text-sm font-normal opacity-60">WIB</span>
+                  {vcfData.vcf_keluar?.jam_keluar?.substring(0, 5) || "—"} <span className="text-sm font-normal opacity-60">WIB</span>
                 </p>
               </div>
               <div className="p-6 rounded-2xl bg-bg-primary dark:bg-white/5 border border-border/50">
@@ -158,6 +175,13 @@ export default function Bagian4Form({ vcfId, canEdit, canFill, vcfData, onSucces
                 </p>
               </div>
             </div>
+
+            {vcfData.vcf_keluar?.keterangan && (
+              <div className="mt-6 pt-6 border-t border-border">
+                <p className="text-[10px] uppercase font-bold text-text-muted tracking-widest mb-2">Keterangan</p>
+                <p className="text-sm text-text-primary dark:text-slate-200">{vcfData.vcf_keluar.keterangan}</p>
+              </div>
+            )}
 
             <div className="mt-8 pt-8 border-t border-border flex items-center justify-center gap-2 text-slate-400 text-xs italic">
               VCF Selesai Diproses
@@ -170,8 +194,7 @@ export default function Bagian4Form({ vcfId, canEdit, canFill, vcfData, onSucces
 
   // Show read-only view if data exists and not currently editing
   const hasExistingData = vcfData.vcf_keluar;
-  if (hasExistingData && !isEditing) {
-    return (
+  const readOnlyView = hasExistingData ? (
       <div className="space-y-6">
         {vcfData.status === "reject" && (
           <div className="p-5 rounded-2xl border-2 animate-pulse" style={{ background: "rgba(239,68,68,0.05)", borderColor: "rgba(239,68,68,0.2)" }}>
@@ -204,7 +227,7 @@ export default function Bagian4Form({ vcfId, canEdit, canFill, vcfData, onSucces
               <div className="flex items-center justify-between p-4 rounded-xl bg-slate-50 dark:bg-white/5 border border-slate-100 dark:border-white/5">
                 <div>
                   <p className="text-[10px] uppercase font-bold text-text-muted tracking-widest mb-1">Jam Keluar</p>
-                  <p className="font-bold text-text-primary dark:text-slate-200">{vcfData.vcf_keluar?.jam_keluar} WIB</p>
+                  <p className="font-bold text-text-primary dark:text-slate-200">{vcfData.vcf_keluar?.jam_keluar?.substring(0, 5)} WIB</p>
                 </div>
               </div>
               <div className="flex items-center justify-between p-4 rounded-xl bg-slate-50 dark:bg-white/5 border border-slate-100 dark:border-white/5">
@@ -215,17 +238,16 @@ export default function Bagian4Form({ vcfId, canEdit, canFill, vcfData, onSucces
               </div>
             </div>
 
-            {vcfData.vcf_keluar?.keterangan && (
-              <div className="mt-6 pt-6 border-t border-border">
+            <div className="mt-4">
+              <div className="p-4 rounded-xl bg-slate-50 dark:bg-white/5 border border-slate-100 dark:border-white/5">
                 <p className="text-[10px] uppercase font-bold text-text-muted tracking-widest mb-2">Keterangan</p>
-                <p className="text-sm text-text-primary dark:text-slate-200">{vcfData.vcf_keluar.keterangan}</p>
+                <p className="text-sm text-text-primary dark:text-slate-200">{vcfData.vcf_keluar?.keterangan || "—"}</p>
               </div>
-            )}
+            </div>
           </div>
         </div>
       </div>
-    );
-  }
+    ) : null;
 
   // Show waiting message if cannot fill and cannot edit
   if (!canFill && !canEdit) {
@@ -236,11 +258,12 @@ export default function Bagian4Form({ vcfId, canEdit, canFill, vcfData, onSucces
     );
   }
 
-  const isAlreadyFilled = vcfData.status === "weighbridge_keluar";
+  const isAlreadyFilled = !!vcfData.vcf_keluar;
   const isReadOnly = isAlreadyFilled && !isEditing;
 
-  return (
+  const formView = (
     <div className="max-w-4xl mx-auto space-y-6">
+      <ToastContainer toasts={toasts} onRemove={removeToast} />
       <div className="flex items-center justify-between border-b border-border pb-4">
         <div>
           <h2 className="text-2xl font-black text-black dark:text-white tracking-tight">Main Gate (Keluar)</h2>
@@ -371,7 +394,13 @@ export default function Bagian4Form({ vcfId, canEdit, canFill, vcfData, onSucces
                 type="button"
                 className="px-8 py-4 rounded-2xl font-bold text-sm bg-slate-200 dark:bg-white/10 text-slate-600 dark:text-slate-300 border-2 border-transparent hover:bg-slate-300 dark:hover:bg-white/20 transition-all duration-300"
                 onClick={() => {
-                  setJamKeluar(vcfData.vcf_keluar?.jam_keluar || "");
+                  const timeVal = vcfData.vcf_keluar?.jam_keluar || "";
+                  let formattedTime = timeVal.substring(0, 5);
+                  if (timeVal.includes(":")) {
+                    const parts = timeVal.split(":");
+                    formattedTime = `${parts[0].padStart(2, "0")}:${parts[1].padStart(2, "0")}`.substring(0, 5);
+                  }
+                  setJamKeluar(formattedTime);
                   setEmergencyKontak(vcfData.vcf_keluar?.emergency_respon_kontak || "");
                   setKeterangan(vcfData.vcf_keluar?.keterangan || "");
                   setIsEditing(false);
@@ -491,4 +520,28 @@ export default function Bagian4Form({ vcfId, canEdit, canFill, vcfData, onSucces
       )}
     </div>
   );
+
+  if (hasExistingData && !isEditing) return readOnlyView;
+  
+  if (hasExistingData && isEditing) {
+    return (
+      <>
+        {readOnlyView}
+        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 backdrop-blur-sm" style={{ background: "rgba(0,0,0,0.6)" }} onClick={() => { setIsEditing(false); setError(""); }}>
+          <div className="glass-card w-full max-w-4xl max-h-[90vh] overflow-y-auto p-2 sm:p-6" onClick={(e) => e.stopPropagation()}>
+            <div className="sticky top-0 bg-bg-card z-10 flex justify-between items-center mb-6 pb-4 border-b border-border">
+               <div>
+                 <h2 className="text-xl font-bold">Edit Main Gate (Keluar)</h2>
+                 <p className="text-xs text-text-muted mt-1">Perbarui hasil pencatatan akhir kendaraan.</p>
+               </div>
+               <button onClick={() => { setIsEditing(false); setError(""); }} className="p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-white/5 transition-colors">✕</button>
+            </div>
+            {formView}
+          </div>
+        </div>
+      </>
+    );
+  }
+
+  return formView;
 }

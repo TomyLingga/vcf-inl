@@ -4,13 +4,13 @@ import { useState, useRef, useEffect } from "react";
 
 interface SearchableDropdownProps {
   label: string;
-  options: Array<{ id: number | string; nama?: string; nama_transporter?: string; nama_supir?: string; label?: string }>;
+  options: Array<{ id: number | string; nama?: string; nama_transporter?: string; nama_supir?: string; label?: string; display_name?: string; [key: string]: any }>;
   value: string;
   onChange: (value: string) => void;
   placeholder?: string;
   required?: boolean;
   id?: string;
-  displayField?: "nama" | "nama_transporter" | "nama_supir" | "label";
+  displayField?: "nama" | "nama_transporter" | "nama_supir" | "label" | "display_name" | string;
 }
 
 export default function SearchableDropdown({

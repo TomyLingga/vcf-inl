@@ -99,7 +99,7 @@
     // Settings State
     const [printSettings, setPrintSettings] = useState({
       company_name: "PT. Industri Nabati Lestari",
-      company_address: "Jl. Industri No. 123, Indonesia",
+      company_address: "Komp. KEK Sei Mangkei, Kav. 2-3,Kec. Bosar Maligas, Kab. Simalungun, Sumatera Utara, 21183",
       show_qr_signature: true,
       footer_text: "Dokumen ini dihasilkan secara otomatis oleh sistem VCF",
       font_family: "Arial, sans-serif",
@@ -126,11 +126,11 @@
           
           const settings = resSettings.data.data || {};
           setPrintSettings({
-            company_name: settings.print_company_name || "PT. Industri Nabati Lestari",
-            company_address: settings.print_company_address || "Jl. Industri No. 123, Indonesia",
-            show_qr_signature: settings.print_show_qr_signature !== false,
-            footer_text: settings.print_footer_text || "Dokumen ini dihasilkan secara otomatis oleh sistem VCF",
-            font_family: settings.print_font_family || "Arial, sans-serif",
+            company_name: settings["print.company_name"] || "PT. Industri Nabati Lestari",
+            company_address: settings["print.company_address"] || "Jl. Industri No. 123, Indonesia",
+            show_qr_signature: settings["print.show_qr_signature"] !== false,
+            footer_text: settings["print.footer_text"] || "Dokumen ini dihasilkan secara otomatis oleh sistem VCF",
+            font_family: settings["print.font_family"] || "Arial, sans-serif",
           });
         } catch (err) {
           console.error("Failed to fetch master data for printing", err);
@@ -453,8 +453,6 @@
           </tbody>
         </table>
 
-        {hasBagian2Data && (
-          <>
         <div style={PRINT_STYLES.HDR}>2. Diisi Oleh Security Weighbridge ( Masuk )</div>
         <table style={{ width: "100%" }}>
           <colgroup>
@@ -546,11 +544,7 @@
             </tr>
           </tbody>
         </table>
-        </>
-        )}
 
-        {hasBagian3Data && (
-          <>
         <div style={PRINT_STYLES.HDR}>3. Diisi Oleh Security Weighbridge ( Keluar )</div>
         <table style={{ width: "100%" }}>
           <colgroup>
@@ -642,11 +636,7 @@
             </tr>
           </tbody>
         </table>
-        </>
-        )}
 
-        {hasBagian4Data && (
-          <>
         <div style={PRINT_STYLES.HDR}>4. Diisi Oleh Security Main Gate</div>
         <table style={{ width: "100%" }}>
           <colgroup><col style={{ width: "50%" }} /><col style={{ width: "50%" }} /></colgroup>
@@ -679,8 +669,6 @@
             </tr>
           </tbody>
         </table>
-        </>
-        )}
 
         <div style={{ marginTop: 3, fontSize: 7, fontStyle: "italic" }}>
           Lembar : 1. WB (Putih), 2. Security (Kuning)

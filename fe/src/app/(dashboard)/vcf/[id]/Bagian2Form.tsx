@@ -4,6 +4,8 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { vcfApi, masterApi } from "@/lib/api";
 import { getErrorMessage } from "@/lib/utils";
+import { useToast, ToastContainer } from "@/components/Toast";
+
 
 interface CheckItem {
   id: number;
@@ -26,6 +28,7 @@ export default function Bagian2Form({ vcfId, canEdit, canFill, vcfData, onSucces
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const { toasts, removeToast, toast } = useToast();
   const [fieldErrors, setFieldErrors] = useState<Record<number, boolean>>({});
   const [pemeriksaanItems, setPemeriksaanItems] = useState<CheckItem[]>([]);
   const [pemeriksaan, setPemeriksaan] = useState<Record<number, string>>({});
@@ -118,9 +121,13 @@ export default function Bagian2Form({ vcfId, canEdit, canFill, vcfData, onSucces
     try {
       await vcfApi.rejectBagian2(vcfId, { catatan_reject: rejectReason });
       setShowRejectModal(false);
-      router.push("/vcf");
-      onReject();
+      toast.success("VCF Ditolak", "Status VCF berhasil diubah menjadi reject.");
+      setTimeout(() => {
+        router.push(`/vcf/${vcfId}`);
+        onReject();
+      }, 1000);
     } catch (err: unknown) {
+      toast.error("Gagal", getErrorMessage(err, "Gagal reject VCF."));
       setError(getErrorMessage(err, "Gagal reject VCF."));
     } finally {
       setLoading(false);
@@ -131,8 +138,9 @@ export default function Bagian2Form({ vcfId, canEdit, canFill, vcfData, onSucces
     // Pre-populate data from vcfData
     if (vcfData.pemeriksaan_masuk) {
       const initial: Record<number, string> = {};
+      pemeriksaanItems.forEach(i => { initial[i.id] = ""; });
       vcfData.pemeriksaan_masuk.forEach((pm: any) => {
-        initial[pm.item_id] = pm.nilai;
+        initial[pm.item_id] = pm.nilai?.trim() || "";
       });
       setPemeriksaan(initial);
     }
@@ -196,7 +204,7 @@ export default function Bagian2Form({ vcfId, canEdit, canFill, vcfData, onSucces
     // Validasi client-side sebelum submit
     const validation = validateForm();
     if (!validation.valid) {
-      setError(validation.message || "Harap lengkapi semua pemeriksaan yang belum diisi.");
+      toast.error("Validasi Gagal", validation.message || "Harap lengkapi semua pemeriksaan yang belum diisi.");
       const firstErrorEl = document.querySelector('[data-error="true"]');
       firstErrorEl?.scrollIntoView({ behavior: "smooth", block: "center" });
       return;
@@ -228,14 +236,19 @@ export default function Bagian2Form({ vcfId, canEdit, canFill, vcfData, onSucces
 
       if (isEditing) {
         await vcfApi.updateBagian2(vcfId, payload);
+        toast.success("Berhasil", "Perubahan Bagian 2 berhasil disimpan.");
         setIsEditing(false);
       } else {
         await vcfApi.createBagian2(vcfId, payload);
+        toast.success("Berhasil", "Pemeriksaan masuk berhasil disimpan.");
       }
       
-      router.push("/vcf");
-      onSuccess();
+      setTimeout(() => {
+        router.push(`/vcf/${vcfId}`);
+        onSuccess();
+      }, 1000);
     } catch (err: unknown) {
+      toast.error("Gagal", getErrorMessage(err, "Gagal menyimpan Bagian 2."));
       setError(getErrorMessage(err, "Gagal menyimpan Bagian 2."));
     } finally {
       setLoading(false);
@@ -244,8 +257,7 @@ export default function Bagian2Form({ vcfId, canEdit, canFill, vcfData, onSucces
 
   // Show read-only view if data exists and not currently editing
   const hasExistingData = vcfData.pemeriksaan_masuk && vcfData.pemeriksaan_masuk.length > 0;
-  if (hasExistingData && !isEditing) {
-    return (
+  const readOnlyView = hasExistingData ? (
       <div className="space-y-6">
         {vcfData.status === "reject" && (
           <div className="p-5 rounded-2xl border-2 animate-pulse" style={{ background: "rgba(239,68,68,0.05)", borderColor: "rgba(239,68,68,0.2)" }}>
@@ -281,7 +293,7 @@ export default function Bagian2Form({ vcfId, canEdit, canFill, vcfData, onSucces
                     <p className="text-[10px] uppercase font-bold text-text-muted tracking-widest mb-1">{pm.item?.nama_item}</p>
                     <p className="font-bold text-text-primary dark:text-slate-200">{pm.nilai}</p>
                   </div>
-                  {(pm.nilai === 'Rusak' || pm.nilai === 'Tidak' || pm.nilai === 'Tidak Ada') ? (
+                  {(pm.nilai === 'Rusak' || pm.nilai === 'Tidak' || pm.nilai === 'Tidak Ada' || pm.nilai === 'Tidak Terpasang') ? (
                     <div className="text-[10px] font-black text-red-500 bg-red-500/10 px-2 py-1 rounded uppercase">{pm.nilai}</div>
                   ) : (
                     <div className="text-[10px] font-black text-emerald-500 bg-emerald-500/10 px-2 py-1 rounded uppercase">{pm.nilai}</div>
@@ -325,11 +337,11 @@ export default function Bagian2Form({ vcfId, canEdit, canFill, vcfData, onSucces
           </div>
         </div>
       </div>
-    );
-  }
+    ) : null;
 
-  return (
+  const formView = (
     <div className="max-w-4xl mx-auto space-y-6">
+      <ToastContainer toasts={toasts} onRemove={removeToast} />
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-2xl font-black text-black dark:text-white tracking-tight">{isEditing ? "Edit Security Weighbridge (Masuk)" : "Security Weighbridge (Masuk)"}</h2>
@@ -349,9 +361,9 @@ export default function Bagian2Form({ vcfId, canEdit, canFill, vcfData, onSucces
       <form onSubmit={handleSubmit} className="space-y-6">
         <div className="grid grid-cols-1 gap-4">
           {pemeriksaanItems.map((item) => {
-            const options = item.tipe_jawaban && item.tipe_jawaban.includes(',') ? item.tipe_jawaban.split(',') : null;
+            const options = item.tipe_jawaban && item.tipe_jawaban.includes(',') ? item.tipe_jawaban.split(',').map(o => o.trim()) : null;
             const isSelect = Array.isArray(options) && options.length > 0;
-            const value = pemeriksaan[item.id];
+            const value = pemeriksaan[item.id] || "";
             const hasError = fieldErrors[item.id];
 
             return (
@@ -370,7 +382,7 @@ export default function Bagian2Form({ vcfId, canEdit, canFill, vcfData, onSucces
                     {isSelect ? (
                       <div className="flex flex-wrap gap-2">
                         {options.map((opt: string) => {
-                          const isSelected = value === opt;
+                          const isSelected = value.toLowerCase() === opt.toLowerCase();
                           const isWarning = opt === "Rusak" || opt === "Tidak Terpasang" || opt === "Tidak Ada";
                           return (
                             <label
@@ -565,5 +577,28 @@ export default function Bagian2Form({ vcfId, canEdit, canFill, vcfData, onSucces
       )}
     </div>
   );
-}
 
+  if (hasExistingData && !isEditing) return readOnlyView;
+  
+  if (hasExistingData && isEditing) {
+    return (
+      <>
+        {readOnlyView}
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 backdrop-blur-sm" style={{ background: "rgba(0,0,0,0.6)" }} onClick={() => { setIsEditing(false); setError(""); }}>
+          <div className="glass-card w-full max-w-4xl max-h-[90vh] overflow-y-auto p-2 sm:p-6" onClick={(e) => e.stopPropagation()}>
+            <div className="sticky top-0 bg-bg-card z-10 flex justify-between items-center mb-6 pb-4 border-b border-border">
+               <div>
+                 <h2 className="text-xl font-bold">Edit Security Weighbridge (Masuk)</h2>
+                 <p className="text-xs text-text-muted mt-1">Perbarui hasil validasi fisik kendaraan.</p>
+               </div>
+               <button onClick={() => { setIsEditing(false); setError(""); }} className="p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-white/5 transition-colors">✕</button>
+            </div>
+            {formView}
+          </div>
+        </div>
+      </>
+    );
+  }
+
+  return formView;
+}

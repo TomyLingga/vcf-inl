@@ -139,43 +139,43 @@ export default function PrintTemplate({
           {/* ── SHARED HEADER ── */}
           <table style={{ width: "100%", marginBottom: 0, borderCollapse: "collapse" }}>
             <colgroup>
-              <col style={{ width: "15%" }} />
-              <col style={{ width: "47%" }} />
-              <col style={{ width: "19%" }} />
-              <col style={{ width: "19%" }} />
+              <col style={{ width: "10%" }} />
+              <col style={{ width: "50%" }} />
+              <col style={{ width: "14%" }} />
+              <col style={{ width: "10%" }} />
             </colgroup>
             <tbody>
               {/* Row 1–4: Logo + Company Info + Doc metadata */}
               <tr>
                 <td rowSpan={4} style={{ ...PRINT_STYLES.CELL, padding: 0, position: "relative" }}>
                   <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center" }}>
-                    <img src="/logo.svg" style={{ width: 60, height: "auto", display: "block" }} alt="VCF Logo" />
+                    <img src="/logo.png" style={{ width: 60, height: "auto", display: "block" }} alt="VCF Logo" />
                   </div>
                 </td>
                 <td rowSpan={3} style={{ ...PRINT_STYLES.CELL, textAlign: "center", verticalAlign: "middle", padding: "4px 6px" }}>
-                  <div style={{ fontWeight: "bold", fontSize: 11, letterSpacing: 0.3 }}>{company_name}</div>
-                  <div style={{ fontWeight: "bold", fontSize: 9, marginTop: 1 }}>PABRIK MINYAK GORENG</div>
+                  <div style={{ fontWeight: "bold", fontSize: 11, letterSpacing: 0.3 , textDecoration: "underline"}}>{company_name}</div>
+                  <div style={{ fontSize: 9, marginTop: 1 }}>PABRIK MINYAK GORENG</div>
                   <div style={{ fontSize: 8, marginTop: 2, lineHeight: 1.4 }}>
                     {company_address}
                   </div>
                 </td>
-                <td style={{ ...PRINT_STYLES.CELL, fontSize: 8 }}>No. Dokumen</td>
-                <td style={{ ...PRINT_STYLES.CELL, fontSize: 8, fontWeight: "bold" }}>{docNo}</td>
+                <td style={{ ...PRINT_STYLES.CELL_CENTER, fontSize: 8 }}>No. Dokumen</td>
+                <td style={{ ...PRINT_STYLES.CELL_CENTER, fontSize: 8, fontWeight: "bold" }}>{docNo}</td>
               </tr>
               <tr>
-                <td style={{ ...PRINT_STYLES.CELL, fontSize: 8 }}>Tgl berlaku</td>
-                <td style={{ ...PRINT_STYLES.CELL, fontSize: 8 }}>{effDate}</td>
+                <td style={{ ...PRINT_STYLES.CELL_CENTER, fontSize: 8 }}>Tgl berlaku</td>
+                <td style={{ ...PRINT_STYLES.CELL_CENTER, fontSize: 8 }}>{effDate}</td>
               </tr>
               <tr>
-                <td style={{ ...PRINT_STYLES.CELL, fontSize: 8 }}>No. Revisi</td>
-                <td style={{ ...PRINT_STYLES.CELL, fontSize: 8 }}>{revNo}</td>
+                <td style={{ ...PRINT_STYLES.CELL_CENTER, fontSize: 8 }}>No. Revisi</td>
+                <td style={{ ...PRINT_STYLES.CELL_CENTER, fontSize: 8 }}>{revNo}</td>
               </tr>
               <tr>
-                <td style={{ ...PRINT_STYLES.CELL, textAlign: "center", verticalAlign: "middle", fontWeight: "bold", fontSize: 10, padding: "5px 4px", borderTop: "1px solid #000" }}>
+                <td style={{ ...PRINT_STYLES.CELL_CENTER, textAlign: "center", verticalAlign: "middle", fontWeight: "bold", fontSize: 10, padding: "5px 4px", borderTop: "1px solid #000" }}>
                   {title.toUpperCase()}
                 </td>
-                <td style={{ ...PRINT_STYLES.CELL, fontSize: 8 }}>Halaman</td>
-                <td style={{ ...PRINT_STYLES.CELL, fontSize: 8 }}>1 dari 1</td>
+                <td style={{ ...PRINT_STYLES.CELL_CENTER, fontSize: 8 }}>Halaman</td>
+                <td style={{ ...PRINT_STYLES.CELL_CENTER, fontSize: 8 }}>1 dari 1</td>
               </tr>
             </tbody>
           </table>

@@ -10,6 +10,7 @@ import { downloadImportTemplate, parseExcelPreview, importDataBatch } from "@/li
 import DeleteConfirmModal from "@/components/DeleteConfirmModal";
 import ImportConfirmModal from "@/components/ImportConfirmModal";
 import ImportResultModal from "@/components/ImportResultModal";
+import { useToast, ToastContainer } from "@/components/Toast";
 
 interface MuatanItem {
   id: number;
@@ -21,6 +22,7 @@ interface MuatanItem {
 }
 
 export default function MuatanDibawaPage() {
+  const { toasts, removeToast, toast } = useToast();
   const [data, setData] = useState<MuatanItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
@@ -34,6 +36,7 @@ export default function MuatanDibawaPage() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const [isPrinting, setIsPrinting] = useState(false);
+  const [collapsed, setCollapsed] = useState(false);
 
   // Delete Modal State
   const [showDeleteModal, setShowDeleteModal] = useState(false);
@@ -107,9 +110,8 @@ export default function MuatanDibawaPage() {
     try {
       await masterApi.updateItemMuatan(item.id, { is_active: !item.is_active });
       fetchData();
-    } catch (err: any) {
-      alert(getErrorMessage(err, "Gagal mengubah status."));
-    }
+      toast.success("Status diperbarui", `Status "${item.nama_item}" berhasil diubah.`);
+    } catch (err: any) { toast.error("Gagal mengubah status", getErrorMessage(err, "Terjadi kesalahan.")); }
   };
 
   const handleDeleteClick = (id: number) => {
@@ -122,42 +124,44 @@ export default function MuatanDibawaPage() {
     setDeleting(true);
     try {
       await masterApi.deleteItemMuatan(deleteId);
-      setShowDeleteModal(false);
-      fetchData();
+      setShowDeleteModal(false); fetchData();
+      toast.success("Data dihapus", "Item muatan dibawa berhasil dihapus.");
     } catch (err: any) {
-      alert(getErrorMessage(err, "Gagal menghapus data."));
-    } finally {
-      setDeleting(false);
-      setDeleteId(null);
-    }
+      toast.error("Gagal menghapus", getErrorMessage(err, "Gagal menghapus data."));
+    } finally { setDeleting(false); setDeleteId(null); }
   };
 
   const handleSave = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setSaving(true);
-    setError("");
+    e.preventDefault(); setSaving(true); setError("");
     try {
       const payload = { ...form, jenis: "dibawa" };
       if (editing) {
         await masterApi.updateItemMuatan(editing.id, payload);
+        toast.success("Data diperbarui", `Item "${form.nama_item}" berhasil diperbarui.`);
       } else {
         await masterApi.createItemMuatan(payload);
+        toast.success("Data disimpan", `Item "${form.nama_item}" berhasil ditambahkan.`);
       }
-      setShowModal(false);
-      fetchData();
+      setShowModal(false); fetchData();
     } catch (err: any) {
-      setError(getErrorMessage(err, "Gagal menyimpan data."));
-    } finally {
-      setSaving(false);
-    }
+      const msg = getErrorMessage(err, "Gagal menyimpan data.");
+      setError(msg);
+      toast.error(editing ? "Gagal memperbarui" : "Gagal menyimpan", msg);
+    } finally { setSaving(false); }
   };
 
   return (
     <div>
+      <ToastContainer toasts={toasts} onRemove={removeToast} />
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
-        <div>
-          <h1 className="page-title">Master Data — Muatan Dibawa</h1>
-          <p className="page-subtitle">Kelola item pemeriksaan untuk muatan yang dibawa supir (Unloading)</p>
+        <div className="flex items-center gap-3">
+          <button onClick={() => setCollapsed(v => !v)} className="w-8 h-8 flex items-center justify-center rounded-lg transition-all hover:bg-white/10" title={collapsed ? "Expand" : "Collapse"} style={{ color: "var(--text-secondary)" }}>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" style={{ transform: collapsed ? "rotate(-90deg)" : "rotate(0deg)", transition: "transform 0.25s" }}><path d="m6 9 6 6 6-6" /></svg>
+          </button>
+          <div>
+            <h1 className="page-title">Master Data — Muatan Dibawa</h1>
+            <p className="page-subtitle">Kelola item pemeriksaan untuk muatan yang dibawa supir (Unloading)</p>
+          </div>
         </div>
         <div className="flex flex-wrap items-center gap-2">
           {/* Import */}
@@ -225,6 +229,7 @@ export default function MuatanDibawaPage() {
         </div>
       </div>
 
+      <div style={{ overflow: "hidden", maxHeight: collapsed ? "0px" : "9000px", transition: "max-height 0.4s cubic-bezier(0.4,0,0.2,1)", opacity: collapsed ? 0 : 1 }}>
       <div className="flex flex-wrap gap-4 mb-6">
         <div className="relative flex-1 max-w-md">
           <div className="absolute left-4 top-1/2 -translate-y-1/2 text-secondary pointer-events-none">
@@ -304,6 +309,7 @@ export default function MuatanDibawaPage() {
             )}
           </tbody>
         </table>
+      </div>
       </div>
 
       {showModal && (

@@ -13,6 +13,7 @@ const Bagian2Form = lazy(() => import("./Bagian2Form"));
 const Bagian3Form = lazy(() => import("./Bagian3Form"));
 const Bagian4Form = lazy(() => import("./Bagian4Form"));
 const PrintVCF = lazy(() => import("./PrintVCF"));
+const Bagian1EditModal = lazy(() => import("./Bagian1EditModal"));
 
 // Form loading skeleton
 function FormSkeleton() {
@@ -110,6 +111,7 @@ export default function VcfDetailPage() {
   const [hasInitializedTab, setHasInitializedTab] = useState(false);
   const [showPrint, setShowPrint] = useState(false);
   const [showGuide, setShowGuide] = useState(false);
+  const [showBagian1Edit, setShowBagian1Edit] = useState(false);
 
   const fetchVcf = useCallback(async () => {
     try {
@@ -313,6 +315,20 @@ export default function VcfDetailPage() {
             </div>
           </div>
         </div>
+      )}
+
+      {/* Bagian1 Edit Modal */}
+      {showBagian1Edit && (
+        <Suspense fallback={null}>
+          <Bagian1EditModal
+            vcfId={vcf.id}
+            onClose={() => setShowBagian1Edit(false)}
+            onSuccess={() => {
+              setShowBagian1Edit(false);
+              fetchVcf();
+            }}
+          />
+        </Suspense>
       )}
 
       {/* Progress steps */}
@@ -536,7 +552,7 @@ export default function VcfDetailPage() {
               {canEditRegistrasi && (
                 <button
                   className="ml-auto btn btn-secondary btn-sm flex items-center gap-2"
-                  onClick={() => router.push(`/vcf/${vcfId}/edit`)}
+                  onClick={() => setShowBagian1Edit(true)}
                 >
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                     <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
