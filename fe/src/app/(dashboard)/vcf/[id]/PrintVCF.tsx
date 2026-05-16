@@ -217,7 +217,7 @@
 
     if (loading) {
       return (
-        <PrintTemplate title="Vehicle Control Form ( VCF )" subtitle={`No. ${vcf.nomor_urut}`} onClose={onClose} settings={printSettings}>
+        <PrintTemplate title={`VCF - ${vcf.nomor_urut}`} subtitle="Memuat data..." onClose={onClose} settings={printSettings}>
           <PrintSkeleton />
         </PrintTemplate>
       );
@@ -225,8 +225,8 @@
 
     return (
       <PrintTemplate 
-        title="Vehicle Control Form ( VCF )" 
-        subtitle={`No. ${vcf.nomor_urut}`} 
+        title={`VCF - ${vcf.nomor_urut}`} 
+        subtitle="Vehicle Control Form" 
         onClose={onClose}
         settings={printSettings}
       >

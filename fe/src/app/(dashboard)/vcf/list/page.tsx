@@ -139,16 +139,16 @@ export default function VcfListPage() {
 
   const getActionButtonStyle = (status: string) => {
     switch (status) {
-      case "bagian1_selesai": return "border-amber-500 text-amber-500 hover:bg-amber-500 hover:text-white shadow-sm hover:shadow-amber-500/20";
-      case "bagian2_selesai": return "border-indigo-500 text-indigo-500 hover:bg-indigo-500 hover:text-white shadow-sm hover:shadow-indigo-500/20";
-      case "loading_unloading_proses": 
-      case "loading_unloading_selesai": return "border-violet-500 text-violet-500 hover:bg-violet-500 hover:text-white shadow-sm hover:shadow-violet-500/20";
-      case "bagian3_selesai": return "border-emerald-500 text-emerald-500 hover:bg-emerald-500 hover:text-white shadow-sm hover:shadow-emerald-500/20";
+      case "bagian1_selesai": return "bg-amber-500 text-white hover:bg-amber-600 shadow-sm";
+      case "bagian2_selesai": return "bg-indigo-600 text-white hover:bg-indigo-700 shadow-sm";
+      case "loading_unloading_proses":
+      case "loading_unloading_selesai": return "bg-violet-600 text-white hover:bg-violet-700 shadow-sm";
+      case "bagian3_selesai": return "bg-emerald-600 text-white hover:bg-emerald-700 shadow-sm";
       case "selesai":
       case "reject":
-         return "border-slate-300 text-slate-500 hover:bg-slate-500 hover:text-white dark:border-white/20 dark:text-slate-400 dark:hover:bg-white/20 dark:hover:text-white";
+        return "bg-slate-100 dark:bg-white/5 text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-white/10";
       default:
-         return "border-blue-500 text-blue-500 hover:bg-blue-500 hover:text-white shadow-sm hover:shadow-blue-500/20";
+        return "bg-blue-600 text-white hover:bg-blue-700 shadow-sm";
     }
   };
 
@@ -199,13 +199,13 @@ export default function VcfListPage() {
               </button>
             </div>
 
-            <button onClick={() => setIsPrinting(true)} className="btn btn-secondary flex items-center gap-2 py-2.5">
+            <button onClick={() => setIsPrinting(true)} className="px-4 py-2.5 rounded-xl bg-white dark:bg-white/5 border border-slate-200 dark:border-white/10 text-slate-600 dark:text-slate-300 font-bold text-xs flex items-center gap-2 hover:bg-slate-50 transition-all shadow-sm">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                 <polyline points="6 9 6 2 18 2 18 9" /><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2" /><rect x="6" y="14" width="12" height="8" />
               </svg>
               Print
             </button>
-            <button onClick={() => exportToExcel(`VCF_Export_${stageFilter}`, exportHeaders, exportData)} className="btn btn-primary flex items-center gap-2 py-2.5">
+            <button onClick={() => exportToExcel(`VCF_Export_${stageFilter}`, exportHeaders, exportData)} className="px-5 py-2.5 rounded-xl bg-slate-900 text-white font-bold text-xs flex items-center gap-2 hover:bg-slate-800 transition-all shadow-sm">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                 <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><polyline points="7 10 12 15 17 10" /><line x1="12" y1="15" x2="12" y2="3" />
               </svg>
@@ -254,16 +254,16 @@ export default function VcfListPage() {
             </div>
 
             {/* Reset Actions */}
-            <div className="md:col-span-2 flex items-end gap-2">
+            <div className="md:col-span-2 flex items-end">
               <button
                 onClick={() => {
                   setSearch("");
                   setTanggalDari(firstDay);
                   setTanggalSampai(lastDay);
                 }}
-                className="btn btn-secondary w-full py-3 font-bold text-[10px] uppercase tracking-widest"
+                className="w-full py-3 rounded-xl bg-slate-50 dark:bg-white/5 border border-slate-100 dark:border-white/10 text-slate-400 font-bold text-[10px] uppercase tracking-widest hover:bg-slate-100 transition-all"
               >
-                Reset
+                Reset Filter
               </button>
             </div>
           </div>
@@ -314,8 +314,17 @@ export default function VcfListPage() {
                       </td>
                       <td>
                         <div className="flex items-center gap-2">
-                          <Link href={`/vcf/${vcf.id}`} className="btn btn-sm btn-primary py-1.5 px-3 text-[10px] font-bold uppercase tracking-widest">{getActionLabel(vcf)}</Link>
-                          <button onClick={() => handlePrint(vcf.id)} className="btn btn-sm btn-secondary p-1.5" disabled={fetchingPrint}>
+                          <Link
+                            href={`/vcf/${vcf.id}`}
+                            className={`px-4 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-widest transition-all ${getActionButtonStyle(vcf.status)}`}
+                          >
+                            {getActionLabel(vcf)}
+                          </Link>
+                          <button
+                            onClick={() => handlePrint(vcf.id)}
+                            className="p-1.5 rounded-lg bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 text-slate-400 hover:text-slate-600 transition-all"
+                            disabled={fetchingPrint}
+                          >
                             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M6 9V2h12v7M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2M6 14h12v8H6z" /></svg>
                           </button>
                         </div>
@@ -360,30 +369,23 @@ export default function VcfListPage() {
                       </div>
                     </div>
                     <div className="flex items-center gap-2 pt-1">
-                    <Link
-                      href={`/vcf/${vcf.id}`}
-                      className={`flex-1 flex items-center justify-center rounded-xl py-2.5 text-[10px] font-black uppercase tracking-widest transition-all border-2 ${getActionButtonStyle(vcf.status)}`}
-                    >
-                      {getActionLabel(vcf)}
-                    </Link>
-
-                    <button
-                      onClick={() => handlePrint(vcf.id)}
-                      disabled={fetchingPrint}
-                      className="btn btn-sm !bg-transparent border border-gray-400 text-gray-700 hover:!bg-gray-100 p-2.5"
-                    >
-                      <svg
-                        width="14"
-                        height="14"
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        stroke="currentColor"
-                        strokeWidth="2.5"
+                      <Link
+                        href={`/vcf/${vcf.id}`}
+                        className={`flex-1 flex items-center justify-center rounded-xl py-3 text-[10px] font-bold uppercase tracking-widest transition-all ${getActionButtonStyle(vcf.status)}`}
                       >
-                        <path d="M6 9V2h12v7M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2M6 14h12v8H6z" />
-                      </svg>
-                    </button>
-                  </div>
+                        {getActionLabel(vcf)}
+                      </Link>
+
+                      <button
+                        onClick={() => handlePrint(vcf.id)}
+                        disabled={fetchingPrint}
+                        className="p-3 rounded-xl bg-slate-50 dark:bg-white/5 border border-slate-100 dark:border-white/10 text-slate-400 hover:bg-slate-100 transition-all"
+                      >
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                          <path d="M6 9V2h12v7M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2M6 14h12v8H6z" />
+                        </svg>
+                      </button>
+                    </div>
                   </div>
                 ))}
               </div>

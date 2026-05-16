@@ -30,10 +30,9 @@ const STAT_CARDS = [
     key: "total" as keyof Stats,
     label: "Total VCF",
     sub: "Semua record hari ini",
-    gradient: "linear-gradient(135deg, #1d4ed8 0%, #3b82f6 60%, #60a5fa 100%)",
-    glow: "rgba(59,130,246,0.35)",
+    color: "#3b82f6",
     icon: (
-      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
         <path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2"/>
         <rect x="9" y="3" width="6" height="4" rx="1"/>
       </svg>
@@ -43,10 +42,9 @@ const STAT_CARDS = [
     key: "aktif" as keyof Stats,
     label: "Aktif",
     sub: "Kendaraan di area",
-    gradient: "linear-gradient(135deg, #b45309 0%, #f59e0b 60%, #fbbf24 100%)",
-    glow: "rgba(245,158,11,0.35)",
+    color: "#f59e0b",
     icon: (
-      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
         <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
       </svg>
     ),
@@ -55,10 +53,9 @@ const STAT_CARDS = [
     key: "selesai" as keyof Stats,
     label: "Selesai",
     sub: "Kendaraan keluar",
-    gradient: "linear-gradient(135deg, #065f46 0%, #10b981 60%, #34d399 100%)",
-    glow: "rgba(16,185,129,0.35)",
+    color: "#10b981",
     icon: (
-      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
         <path d="M20 6L9 17l-5-5"/>
       </svg>
     ),
@@ -67,10 +64,9 @@ const STAT_CARDS = [
     key: "hari_ini" as keyof Stats,
     label: "Hari Ini",
     sub: "Kendaraan masuk",
-    gradient: "linear-gradient(135deg, #5b21b6 0%, #8b5cf6 60%, #a78bfa 100%)",
-    glow: "rgba(139,92,246,0.35)",
+    color: "#8b5cf6",
     icon: (
-      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
         <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
         <line x1="16" y1="2" x2="16" y2="6"/>
         <line x1="8" y1="2" x2="8" y2="6"/>
@@ -89,7 +85,7 @@ const QUICK_ACTIONS = [
 
 function StatCardSkeleton() {
   return (
-    <div style={{ borderRadius: 20, height: 130, background: "var(--bg-card)", border: "1px solid var(--border)", animation: "pulse 1.5s infinite" }} />
+    <div style={{ borderRadius: 12, height: 90, background: "var(--bg-card)", border: "1px solid var(--border)", animation: "pulse 1.5s infinite" }} />
   );
 }
 
@@ -178,31 +174,24 @@ export default function DashboardPage() {
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
         {loading ? [1,2,3,4].map(i => <StatCardSkeleton key={i}/>) : STAT_CARDS.map(card => (
           <div key={card.key} style={{
-            borderRadius: 20, padding: "20px 22px", position: "relative", overflow: "hidden",
-            background: card.gradient,
-            boxShadow: `0 8px 32px ${card.glow}, 0 2px 8px rgba(0,0,0,0.1)`,
-            border: "1px solid rgba(255,255,255,0.2)",
+            borderRadius: 12, padding: "16px", position: "relative", overflow: "hidden",
+            background: "var(--bg-card)", border: "1px solid var(--border)",
+            boxShadow: "0 1px 3px rgba(0,0,0,0.05)",
           }}>
-            {/* Glass shimmer */}
-            <div style={{
-              position: "absolute", inset: 0,
-              background: "linear-gradient(135deg, rgba(255,255,255,0.15) 0%, rgba(255,255,255,0.03) 60%, transparent 100%)",
-              borderRadius: 20, pointerEvents: "none",
-            }}/>
-            <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: 16, position: "relative" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
               <div style={{
-                width: 44, height: 44, borderRadius: 12, background: "rgba(255,255,255,0.2)",
-                border: "1px solid rgba(255,255,255,0.3)", display: "flex", alignItems: "center", justifyContent: "center",
+                width: 40, height: 40, borderRadius: 10, background: `${card.color}15`,
+                display: "flex", alignItems: "center", justifyContent: "center", color: card.color,
               }}>
                 {card.icon}
               </div>
-            </div>
-            <div style={{ position: "relative" }}>
-              <p style={{ fontSize: 36, fontWeight: 800, color: "white", lineHeight: 1, fontFamily: "'Plus Jakarta Sans',sans-serif", letterSpacing: "-1px" }}>
-                {stats[card.key]}
-              </p>
-              <p style={{ fontSize: 13, fontWeight: 600, color: "rgba(255,255,255,0.9)", marginTop: 4 }}>{card.label}</p>
-              <p style={{ fontSize: 11, color: "rgba(255,255,255,0.65)", marginTop: 2 }}>{card.sub}</p>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <p style={{ fontSize: 24, fontWeight: 700, color: "var(--text-primary)", lineHeight: 1, fontFamily: "'Plus Jakarta Sans',sans-serif", letterSpacing: "-0.5px" }}>
+                  {stats[card.key]}
+                </p>
+                <p style={{ fontSize: 12, fontWeight: 600, color: "var(--text-secondary)", marginTop: 2 }}>{card.label}</p>
+                <p style={{ fontSize: 10, color: "var(--text-muted)", marginTop: 1 }}>{card.sub}</p>
+              </div>
             </div>
           </div>
         ))}

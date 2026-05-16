@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { vcfApi, masterApi } from "@/lib/api";
 import { getErrorMessage } from "@/lib/utils";
 import { useToast, ToastContainer } from "@/components/Toast";
+import { VCF_STATUS } from "@/constants/vcfStatus";
 
 
 interface CheckItem {
@@ -35,41 +36,76 @@ export default function Bagian3Form({ vcfId, canEdit, canFill, vcfData, onSucces
   // Reject Modal State
   const [showRejectModal, setShowRejectModal] = useState(false);
   const [rejectReason, setRejectReason] = useState("");
+  const [showSuccess, setShowSuccess] = useState(false);
+
+  const [dataLoading, setDataLoading] = useState(true);
 
   useEffect(() => {
-    masterApi.getItemPemeriksaanKeluar().then((res) => {
-      const items = (res.data.data || res.data).filter(
-        (i: CheckItem & { is_active?: boolean }) => i.is_active !== false
-      );
-      setPemeriksaanItems(items);
-      const initial: Record<number, string> = {};
-      items.forEach((i: CheckItem) => { initial[i.id] = ""; });
-      setPemeriksaan(initial);
-    }).catch(console.error);
-  }, []);
+    const fetchItems = async () => {
+      try {
+        setDataLoading(true);
+        const res = await masterApi.getItemPemeriksaanKeluar();
+        const items = (res.data.data || res.data).filter(
+          (i: CheckItem & { is_active?: boolean }) => i.is_active !== false
+        );
+        setPemeriksaanItems(items);
+        
+        // Initial state
+        const initial: Record<number, string> = {};
+        items.forEach((i: CheckItem) => { initial[i.id] = ""; });
+        setPemeriksaan(initial);
 
-  const handleEdit = () => {
-    if (vcfData.pemeriksaan_keluar) {
+        // Map existing data if it exists
+        if (vcfData && (vcfData.pemeriksaan_keluar?.length > 0 || vcfData.status === VCF_STATUS.BAGIAN3_SELESAI || vcfData.status === 'weighbridge_keluar' || vcfData.status === 'selesai')) {
+          mapExistingData(items, vcfData);
+        }
+      } catch (e) {
+        console.error(e);
+      } finally {
+        setTimeout(() => setDataLoading(false), 500);
+      }
+    };
+    fetchItems();
+  }, [vcfId]);
+
+  const mapExistingData = (items: CheckItem[], data: any) => {
+    // 1. Map existing pemeriksaan data
+    if (data.pemeriksaan_keluar) {
       const initial: Record<number, string> = {};
-      pemeriksaanItems.forEach(i => { initial[i.id] = ""; });
-      vcfData.pemeriksaan_keluar.forEach((pk: any) => {
-        initial[pk.item_id] = pk.nilai?.trim() || "";
+      items.forEach(i => { initial[i.id] = ""; });
+      
+      data.pemeriksaan_keluar.forEach((pk: any) => {
+        const val = pk.nilai?.toString().trim() || "";
+        const itemId = Number(pk.item_id);
+        if (!isNaN(itemId)) {
+          initial[itemId] = val;
+        }
       });
       setPemeriksaan(initial);
     }
 
-    if (vcfData.beban_tambahan_keluar) {
-      setJenisBeban(vcfData.beban_tambahan_keluar.jenis_beban || "");
+    // 2. Map beban tambahan detail
+    if (data.beban_tambahan_keluar) {
+      setJenisBeban(data.beban_tambahan_keluar.jenis_beban || "");
     }
 
-    if (vcfData.segel_keluar) {
-      setJumlahSegel(String(vcfData.segel_keluar.jumlah_segel || ""));
-      setNomorSegel(vcfData.segel_keluar.nomor_segel?.map((s: any) => s.nomor_segel) || [""]);
+    // 3. Map segel detail
+    if (data.segel_keluar) {
+      setJumlahSegel(data.segel_keluar.jumlah_segel?.toString() || "");
+      if (data.segel_keluar.nomor_segel) {
+        // Handle both object array and string (some APIs might return different formats)
+        if (typeof data.segel_keluar.nomor_segel === 'string') {
+          setNomorSegel(data.segel_keluar.nomor_segel.split(",").map((s: string) => s.trim()));
+        } else if (Array.isArray(data.segel_keluar.nomor_segel)) {
+          setNomorSegel(data.segel_keluar.nomor_segel.map((s: any) => s.nomor_segel || s));
+        }
+      }
     }
 
-    setKeteranganUmum(vcfData.segel_keluar?.keterangan || vcfData.vcf_bagian3?.keterangan || "");
-    setIsEditing(true);
+    // 4. Map Keterangan Umum
+    setKeteranganUmum(data.segel_keluar?.keterangan || data.vcf_bagian3?.keterangan || "");
   };
+
 
   const validateForm = (): { valid: boolean; message?: string } => {
     const errors: Record<number, boolean> = {};
@@ -146,17 +182,22 @@ export default function Bagian3Form({ vcfId, canEdit, canFill, vcfData, onSucces
 
       if (isEditing) {
         await vcfApi.updateBagian3(vcfId, payload);
-        toast.success("Berhasil", "Perubahan Bagian 3 berhasil disimpan.");
-        setIsEditing(false);
+        setShowSuccess(true);
+        toast.success("Berhasil", "Perubahan berhasil disimpan.");
+        setTimeout(() => {
+          setIsEditing(false);
+          setShowSuccess(false);
+          onSuccess();
+        }, 1500);
       } else {
         await vcfApi.createBagian3(vcfId, payload);
+        setShowSuccess(true);
         toast.success("Berhasil", "Pemeriksaan keluar berhasil disimpan.");
+        setTimeout(() => {
+          setShowSuccess(false);
+          onSuccess();
+        }, 1500);
       }
-      
-      setTimeout(() => {
-        router.push(`/vcf/${vcfId}`);
-        onSuccess();
-      }, 1000);
     } catch (err: unknown) {
       toast.error("Gagal", getErrorMessage(err, "Gagal menyimpan Bagian 3."));
       setError(getErrorMessage(err, "Gagal menyimpan Bagian 3."));
@@ -200,14 +241,14 @@ export default function Bagian3Form({ vcfId, canEdit, canFill, vcfData, onSucces
           </div>
         )}
 
-        <div className="glass-card overflow-hidden">
+        <div className="p-6 border border-slate-100 dark:border-white/5 rounded-3xl shadow-sm bg-white dark:bg-bg-card overflow-hidden">
           <div className="px-6 py-4 border-b border-border bg-slate-50/50 dark:bg-white/5 flex justify-between items-center">
             <h3 className="font-bold text-text-primary dark:text-white uppercase tracking-wider text-sm">Hasil Pemeriksaan Weighbridge Keluar</h3>
             {/* Only admin can edit existing data */}
             {canEdit && (
               <button
-                onClick={handleEdit}
-                className="btn btn-sm btn-secondary flex items-center gap-2"
+                onClick={() => setIsEditing(true)}
+                className="px-4 py-2 rounded-xl bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 text-slate-500 font-bold text-[10px] flex items-center gap-2 transition-all hover:bg-slate-100"
               >
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
                 EDIT
@@ -297,10 +338,10 @@ export default function Bagian3Form({ vcfId, canEdit, canFill, vcfData, onSucces
 
             return (
               <div key={item.id} className="group transition-all duration-300" data-error={hasError ? "true" : undefined}>
-                <div className={`p-5 rounded-2xl border-2 transition-all duration-300 ${hasError 
-                  ? 'bg-red-50/50 dark:bg-red-500/5 border-red-500 shadow-lg shadow-red-500/10 animate-pulse' 
+                <div className={`p-5 rounded-2xl border transition-all duration-300 ${hasError 
+                  ? 'bg-red-50/50 dark:bg-red-500/5 border-red-500 shadow-sm' 
                   : value 
-                    ? 'bg-white dark:bg-white/5 border-blue-500/50 shadow-lg shadow-blue-500/5' 
+                    ? 'bg-white dark:bg-white/5 border-blue-500/30 shadow-sm' 
                     : 'bg-slate-50/50 dark:bg-white/[0.02] border-slate-100 dark:border-white/5 hover:border-slate-200'
                 }`}>
                   <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
@@ -311,15 +352,15 @@ export default function Bagian3Form({ vcfId, canEdit, canFill, vcfData, onSucces
                     {isSelect ? (
                       <div className="flex flex-wrap gap-2">
                         {options.map((opt: string) => {
-                          const isSelected = value.toLowerCase() === opt.toLowerCase();
+                          const isSelected = value?.toString().trim().toLowerCase() === opt.trim().toLowerCase();
                           const isWarning = opt === "Rusak" || opt === "Tidak Terpasang" || opt === "Tidak Ada" || opt === "Sisa";
                           return (
                             <label
                               key={opt}
                               className={`
-                                cursor-pointer px-4 py-2 rounded-xl text-xs font-bold transition-all duration-200 border-2
+                                cursor-pointer px-4 py-2 rounded-xl text-xs font-bold transition-all duration-200 border
                                 ${isSelected 
-                                  ? (isWarning ? 'bg-red-500 border-red-500 text-white shadow-md shadow-red-500/20' : 'bg-blue-500 border-blue-500 text-white shadow-md shadow-blue-500/20')
+                                  ? (isWarning ? 'bg-red-500 border-red-500 text-white shadow-sm' : 'bg-slate-900 border-slate-900 text-white shadow-sm')
                                   : 'bg-white dark:bg-white/5 border-slate-200 dark:border-white/10 text-slate-500 hover:border-slate-300 dark:hover:border-white/20'
                                 }
                               `}
@@ -461,61 +502,65 @@ export default function Bagian3Form({ vcfId, canEdit, canFill, vcfData, onSucces
               REJECT
             </button>
           )}
-          {isEditing ? (
-            <button
-              type="button"
-              className="px-8 py-4 rounded-2xl font-bold text-sm bg-slate-200 dark:bg-white/10 text-slate-600 dark:text-slate-300 border-2 border-transparent hover:bg-slate-300 dark:hover:bg-white/20 transition-all duration-300"
-              onClick={() => { setIsEditing(false); setError(""); }}
-              disabled={loading}
-            >
-              BATAL
-            </button>
-          ) : (
-            <button
-              type="button"
-              className="px-8 py-4 rounded-2xl font-bold text-sm bg-slate-200 dark:bg-white/10 text-slate-600 dark:text-slate-300 border-2 border-transparent hover:bg-slate-300 dark:hover:bg-white/20 transition-all duration-300"
-              onClick={() => {
-                const resetObj: Record<number, string> = {};
-                pemeriksaanItems.forEach(i => { resetObj[i.id] = ""; });
-                setPemeriksaan(resetObj);
-                setJenisBeban("");
-                setJumlahSegel("");
-                setNomorSegel([""]);
-                setKeteranganUmum("");
-                setError("");
-              }}
-              disabled={loading}
-            >
-              RESET
-            </button>
+          {!isEditing && (
+            <>
+              <button
+                type="button"
+                className="px-8 py-4 rounded-2xl font-bold text-sm bg-slate-200 dark:bg-white/10 text-slate-600 dark:text-slate-300 border-2 border-transparent hover:bg-slate-300 dark:hover:bg-white/20 transition-all duration-300"
+                onClick={() => {
+                  const resetObj: Record<number, string> = {};
+                  pemeriksaanItems.forEach(i => { resetObj[i.id] = ""; });
+                  setPemeriksaan(resetObj);
+                  setJenisBeban("");
+                  setJumlahSegel("");
+                  setNomorSegel([""]);
+                  setKeteranganUmum("");
+                  setError("");
+                }}
+                disabled={loading}
+              >
+                RESET
+              </button>
+              <button
+                type="submit"
+                className="flex-1 py-4 rounded-2xl font-bold text-sm bg-slate-900 text-white shadow-xl shadow-slate-900/20 hover:bg-slate-800 transition-all flex items-center justify-center gap-3"
+                disabled={loading}
+              >
+                {loading ? "MEMPROSES..." : "SIMPAN & LANJUTKAN"}
+              </button>
+            </>
           )}
-          <button
-            type="submit"
-            className="flex-1 py-4 rounded-2xl font-bold text-sm bg-blue-600 text-white shadow-xl shadow-blue-600/20 hover:bg-blue-500 transition-all flex items-center justify-center gap-3"
-            disabled={loading}
-          >
-            {loading ? "MEMPROSES..." : (isEditing ? "SIMPAN PERUBAHAN" : "SIMPAN & LANJUTKAN")}
-          </button>
         </div>
       </form>
 
+      {/* Reject Modal Minimalist */}
       {showRejectModal && (
-        <div className="modal-overlay" onClick={() => setShowRejectModal(false)}>
-          <div className="modal-content max-w-md p-0 overflow-hidden border-none shadow-2xl" onClick={(e) => e.stopPropagation()}>
-            <div className="bg-red-500 p-8 text-white">
-              <h2 className="text-2xl font-black tracking-tight">Konfirmasi Penolakan</h2>
-              <p className="text-red-100 text-sm mt-1">Berikan alasan penolakan di Weighbridge Keluar.</p>
+        <div className="fixed inset-0 z-[70] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm" onClick={() => setShowRejectModal(false)}>
+          <div className="bg-white dark:bg-bg-card w-full max-w-md overflow-hidden rounded-3xl shadow-2xl border border-slate-200 dark:border-white/10" onClick={(e) => e.stopPropagation()}>
+            <div className="p-8 border-b border-slate-50 dark:border-white/5">
+              <h3 className="text-xl font-bold text-slate-800 dark:text-white tracking-tight">Reject VCF</h3>
+              <p className="text-slate-400 text-sm mt-1">Berikan alasan mengapa VCF ini ditolak.</p>
             </div>
+
             <div className="p-8 space-y-6">
               <textarea
-                className="form-input w-full min-h-[120px] bg-slate-50 dark:bg-white/5 border-slate-200"
+                className="form-input w-full min-h-[120px] bg-slate-50 dark:bg-white/5 border-slate-100 focus:border-red-500 rounded-2xl text-sm"
                 placeholder="Alasan penolakan..."
                 value={rejectReason}
                 onChange={(e) => setRejectReason(e.target.value)}
+                autoFocus
               />
-              <div className="flex gap-3">
-                <button className="flex-1 py-3 rounded-xl font-bold text-slate-500" onClick={() => setShowRejectModal(false)}>BATAL</button>
-                <button className="flex-[2] py-3 rounded-xl font-bold bg-red-500 text-white" onClick={handleReject} disabled={loading || !rejectReason.trim()}>TOLAK VCF</button>
+
+              <div className="flex gap-3 pt-2">
+                <button
+                  className="flex-1 py-2.5 rounded-xl font-bold text-slate-500 hover:bg-slate-50 transition-colors text-sm"
+                  onClick={() => setShowRejectModal(false)}
+                >Batal</button>
+                <button
+                  className="flex-[2] py-2.5 rounded-xl font-bold bg-red-500 text-white shadow-sm hover:bg-red-600 transition-all text-sm"
+                  onClick={handleReject}
+                  disabled={loading || !rejectReason.trim()}
+                >Konfirmasi Reject</button>
               </div>
             </div>
           </div>
@@ -524,22 +569,79 @@ export default function Bagian3Form({ vcfId, canEdit, canFill, vcfData, onSucces
     </div>
   );
 
+  if (dataLoading) {
+    return (
+      <div className="glass-card p-12 flex flex-col items-center justify-center space-y-4">
+        <div className="spinner-accent w-10 h-10" style={{ borderColor: 'var(--accent-primary)' }} />
+        <div className="flex flex-col items-center">
+          <p className="text-sm font-bold text-slate-700 dark:text-slate-300">Memuat Data VCF...</p>
+          <p className="text-[11px] text-slate-500">Menyiapkan formulir pemeriksaan keluar</p>
+        </div>
+      </div>
+    );
+  }
+
   if (hasExistingData && !isEditing) return readOnlyView;
   
   if (hasExistingData && isEditing) {
     return (
       <>
         {readOnlyView}
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 backdrop-blur-sm" style={{ background: "rgba(0,0,0,0.6)" }} onClick={() => { setIsEditing(false); setError(""); }}>
-          <div className="glass-card w-full max-w-4xl max-h-[90vh] overflow-y-auto p-2 sm:p-6" onClick={(e) => e.stopPropagation()}>
-            <div className="sticky top-0 bg-bg-card z-10 flex justify-between items-center mb-6 pb-4 border-b border-border">
-               <div>
-                 <h2 className="text-xl font-bold">Edit Security Weighbridge (Keluar)</h2>
-                 <p className="text-xs text-text-muted mt-1">Perbarui hasil validasi fisik kendaraan.</p>
-               </div>
-               <button onClick={() => { setIsEditing(false); setError(""); }} className="p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-white/5 transition-colors">✕</button>
+         <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm" onClick={() => { setIsEditing(false); setError(""); }}>
+          <div className="bg-white dark:bg-bg-card w-full max-w-5xl max-h-[95vh] overflow-hidden flex flex-col rounded-3xl shadow-2xl border border-slate-200 dark:border-white/10" onClick={(e) => e.stopPropagation()}>
+            <div className="px-8 py-6 border-b border-slate-100 dark:border-white/5 flex justify-between items-center bg-white dark:bg-bg-card">
+              <div className="flex items-center gap-4">
+                <div className="w-12 h-12 rounded-2xl bg-slate-50 dark:bg-white/5 flex items-center justify-center border border-slate-100 dark:border-white/10">
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-violet-500"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                </div>
+                <div>
+                  <h2 className="text-xl font-bold text-slate-800 dark:text-white tracking-tight">Edit Security Weighbridge (Keluar)</h2>
+                  <p className="text-slate-400 text-xs font-medium">Perbarui data pemeriksaan fisik kendaraan</p>
+                </div>
+              </div>
+              <button onClick={() => { setIsEditing(false); setError(""); }} className="p-2 rounded-xl hover:bg-slate-100 dark:hover:bg-white/5 text-slate-400 transition-all">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M18 6 6 18M6 6l12 12"/></svg>
+              </button>
             </div>
-            {formView}
+            
+            <div className="p-8 overflow-y-auto flex-1 bg-white dark:bg-bg-card relative">
+               {showSuccess && (
+                 <div className="absolute inset-0 z-[100] flex flex-col items-center justify-center bg-white/95 dark:bg-slate-900/98 backdrop-blur-sm animate-fadeIn">
+                   <div className="w-16 h-16 rounded-full bg-emerald-50 text-emerald-500 flex items-center justify-center border-2 border-emerald-100 mb-4">
+                     <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round">
+                       <polyline points="20 6 9 17 4 12" />
+                     </svg>
+                   </div>
+                   <h3 className="text-xl font-bold text-slate-800 dark:text-white mb-1">Berhasil Disimpan</h3>
+                   <p className="text-slate-400 text-sm font-medium">Data telah diperbarui secara aman.</p>
+                   
+                   <style>{`
+                     .animate-fadeIn { animation: fadeIn 0.2s ease-out forwards; }
+                     @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+                   `}</style>
+                 </div>
+               )}
+               <div className="max-w-4xl mx-auto">
+                 {formView}
+               </div>
+            </div>
+             <div className="p-6 border-t border-slate-100 dark:border-white/5 bg-white dark:bg-bg-card flex justify-end gap-3 shrink-0">
+                <button 
+                  type="button"
+                  onClick={() => { setIsEditing(false); setError(""); }} 
+                  className="px-6 py-2.5 rounded-xl font-bold text-slate-500 hover:bg-slate-50 transition-colors text-sm"
+                >
+                  Batal
+                </button>
+                <button
+                  type="button"
+                  onClick={handleSubmit}
+                  disabled={loading}
+                  className="px-8 py-2.5 rounded-xl font-bold bg-slate-900 text-white hover:bg-slate-800 transition-all text-sm shadow-sm"
+                >
+                  {loading ? "Menyimpan..." : "Simpan Perubahan"}
+                </button>
+             </div>
           </div>
         </div>
       </>

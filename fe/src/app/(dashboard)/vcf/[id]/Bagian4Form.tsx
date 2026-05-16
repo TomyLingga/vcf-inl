@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { vcfApi } from "@/lib/api";
 import { formatTime, isValidTime24h, getErrorMessage } from "@/lib/utils";
 import { useToast, ToastContainer } from "@/components/Toast";
+import { VCF_STATUS } from "@/constants/vcfStatus";
 
 
 interface VcfData {
@@ -214,7 +215,7 @@ export default function Bagian4Form({ vcfId, canEdit, canFill, vcfData, onSucces
             {canEdit && (
               <button
                 onClick={() => setIsEditing(true)}
-                className="btn btn-sm btn-secondary flex items-center gap-2"
+                className="px-4 py-2 rounded-xl bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 text-slate-500 font-bold text-[10px] flex items-center gap-2 transition-all hover:bg-slate-100"
               >
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
                 EDIT
@@ -223,26 +224,20 @@ export default function Bagian4Form({ vcfId, canEdit, canFill, vcfData, onSucces
           </div>
           
           <div className="p-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="flex items-center justify-between p-4 rounded-xl bg-slate-50 dark:bg-white/5 border border-slate-100 dark:border-white/5">
-                <div>
-                  <p className="text-[10px] uppercase font-bold text-text-muted tracking-widest mb-1">Jam Keluar</p>
-                  <p className="font-bold text-text-primary dark:text-slate-200">{vcfData.vcf_keluar?.jam_keluar?.substring(0, 5)} WIB</p>
-                </div>
+            <div className="flex flex-col sm:flex-row gap-4">
+              <div className="flex-1 p-5 rounded-2xl bg-slate-50 dark:bg-white/5 border border-slate-100 dark:border-white/5">
+                <p className="text-[10px] uppercase font-black text-slate-400 tracking-widest mb-2">Jam Keluar</p>
+                <p className="text-2xl font-black text-slate-700 dark:text-white font-mono">{vcfData.vcf_keluar?.jam_keluar?.substring(0, 5)} <span className="text-xs font-normal opacity-50">WIB</span></p>
               </div>
-              <div className="flex items-center justify-between p-4 rounded-xl bg-slate-50 dark:bg-white/5 border border-slate-100 dark:border-white/5">
-                <div>
-                  <p className="text-[10px] uppercase font-bold text-text-muted tracking-widest mb-1">Emergency Response Kontak</p>
-                  <p className="font-bold text-text-primary dark:text-slate-200">{vcfData.vcf_keluar?.emergency_respon_kontak}</p>
-                </div>
+              <div className="flex-1 p-5 rounded-2xl bg-slate-50 dark:bg-white/5 border border-slate-100 dark:border-white/5">
+                <p className="text-[10px] uppercase font-black text-slate-400 tracking-widest mb-2">Emergency Response Kontak</p>
+                <p className="text-xl font-bold text-slate-700 dark:text-white">{vcfData.vcf_keluar?.emergency_respon_kontak}</p>
               </div>
             </div>
 
-            <div className="mt-4">
-              <div className="p-4 rounded-xl bg-slate-50 dark:bg-white/5 border border-slate-100 dark:border-white/5">
-                <p className="text-[10px] uppercase font-bold text-text-muted tracking-widest mb-2">Keterangan</p>
-                <p className="text-sm text-text-primary dark:text-slate-200">{vcfData.vcf_keluar?.keterangan || "—"}</p>
-              </div>
+            <div className="mt-4 p-5 rounded-2xl bg-slate-50 dark:bg-white/5 border border-slate-100 dark:border-white/5">
+              <p className="text-[10px] uppercase font-black text-slate-400 tracking-widest mb-2">Keterangan</p>
+              <p className="text-sm text-slate-600 dark:text-slate-300 leading-relaxed">{vcfData.vcf_keluar?.keterangan || "—"}</p>
             </div>
           </div>
         </div>
@@ -276,30 +271,56 @@ export default function Bagian4Form({ vcfId, canEdit, canFill, vcfData, onSucces
       </div>
 
       {error && (
-        <div className="p-4 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 text-sm">
+        <div className="p-4 rounded-xl bg-red-500/10 border border-red-500/20 text-red-500 text-sm mb-6">
           {error}
         </div>
       )}
 
-      {/* Ringkasan */}
-      <div className="glass-card p-6">
-        <h3 className="text-[10px] uppercase font-black text-slate-400 tracking-widest mb-4">Ringkasan Perjalanan</h3>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+      <div className="bg-white dark:bg-bg-card border border-slate-100 dark:border-white/5 p-6 rounded-3xl shadow-sm mb-6">
+        <div className="flex items-center gap-4 mb-6">
+          <div className="w-10 h-10 rounded-xl bg-blue-500/10 text-blue-500 flex items-center justify-center">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+          </div>
+          <div>
+            <h2 className="text-xl font-bold text-slate-800 dark:text-white tracking-tight">Main Gate Keluar</h2>
+            <p className="text-slate-400 text-xs font-medium">Validasi akhir sebelum kendaraan keluar</p>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
           {[
-            { label: "No. Urut", value: vcfData.nomor_urut, mono: true },
-            { label: "No. Polisi", value: vcfData.no_polisi },
-            { label: "Tipe", value: vcfData.tipe_kegiatan?.toUpperCase() },
-            { label: "Masuk", value: vcfData.jam_masuk + " WIB", mono: true },
-          ].map(({ label, value, mono }) => (
-            <div key={label}>
-              <p className="text-[10px] text-text-muted mb-1">{label}</p>
-              <p className={`text-sm font-bold text-text-primary dark:text-white ${mono ? "font-mono" : ""}`}>
-                {value || "—"}
-              </p>
+            { 
+              label: "Nomor VCF", 
+              value: vcfData.nomor_urut, 
+              icon: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg> 
+            },
+            { 
+              label: "No. Polisi", 
+              value: vcfData.no_polisi, 
+              icon: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><rect x="1" y="3" width="15" height="13"/><polygon points="16 8 20 8 23 11 23 16 16 16 16 8"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg> 
+            },
+            { 
+              label: "Jam Masuk", 
+              value: vcfData.jam_masuk + " WIB", 
+              icon: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg> 
+            },
+          ].map((item, i) => (
+            <div key={i} className="p-4 rounded-2xl bg-slate-50 dark:bg-white/5 border border-slate-100 dark:border-white/5 flex items-center gap-3">
+              <div className="text-slate-400">{item.icon}</div>
+              <div className="min-w-0">
+                <label className="text-[9px] uppercase font-black text-slate-400 block mb-0.5 tracking-wider">{item.label}</label>
+                <p className="text-sm font-black text-slate-700 dark:text-white truncate">{item.value}</p>
+              </div>
             </div>
           ))}
         </div>
       </div>
+
+      {error && (
+        <div className="p-4 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 text-sm">
+          {error}
+        </div>
+      )}
 
       <form onSubmit={handleSubmitInitial} className="space-y-6">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -365,9 +386,6 @@ export default function Bagian4Form({ vcfId, canEdit, canFill, vcfData, onSucces
         </div>
 
         <div className="p-6 rounded-2xl bg-amber-500/5 border border-amber-500/10">
-        </div>
-
-        <div className="p-6 rounded-2xl bg-amber-500/5 border border-amber-500/10">
           <p className="text-[10px] font-bold text-amber-500 uppercase leading-relaxed text-center">
             {isAlreadyFilled 
               ? "DATA TELAH DICATAT. SILAKAN KONFIRMASI KELUAR MAIN GATE SEKARANG." 
@@ -375,89 +393,46 @@ export default function Bagian4Form({ vcfId, canEdit, canFill, vcfData, onSucces
           </p>
         </div>
 
-        <div className="flex gap-4">
-          {/* Only admin can edit existing data */}
-          {isAlreadyFilled && !isEditing && canEdit && (
-            <button
-              type="button"
-              className="px-8 py-4 rounded-2xl font-bold text-sm bg-blue-500/10 text-blue-500 border-2 border-blue-500/20 hover:bg-blue-500 hover:text-white transition-all duration-300"
-              onClick={() => setIsEditing(true)}
-              disabled={loading}
-            >
-              EDIT DATA
-            </button>
-          )}
-
-          {isAlreadyFilled && isEditing && (
-            <>
+        <div className="flex flex-col sm:flex-row gap-3">
+        {!isEditing && (
+          <div className="flex flex-col sm:flex-row gap-3">
+            {isAlreadyFilled && canEdit && (
               <button
                 type="button"
-                className="px-8 py-4 rounded-2xl font-bold text-sm bg-slate-200 dark:bg-white/10 text-slate-600 dark:text-slate-300 border-2 border-transparent hover:bg-slate-300 dark:hover:bg-white/20 transition-all duration-300"
+                className="w-full sm:w-auto px-8 py-3.5 rounded-xl font-bold text-sm bg-white dark:bg-white/5 text-blue-500 border border-blue-200 dark:border-blue-500/20 hover:bg-blue-50 transition-all"
+                onClick={() => setIsEditing(true)}
+                disabled={loading}
+              >
+                Edit Data
+              </button>
+            )}
+
+            {!isAlreadyFilled && (
+              <button
+                type="button"
+                className="w-full sm:w-auto px-8 py-3.5 rounded-xl font-bold text-sm bg-slate-50 dark:bg-white/10 text-slate-500 hover:bg-slate-100 transition-all"
                 onClick={() => {
-                  const timeVal = vcfData.vcf_keluar?.jam_keluar || "";
-                  let formattedTime = timeVal.substring(0, 5);
-                  if (timeVal.includes(":")) {
-                    const parts = timeVal.split(":");
-                    formattedTime = `${parts[0].padStart(2, "0")}:${parts[1].padStart(2, "0")}`.substring(0, 5);
-                  }
-                  setJamKeluar(formattedTime);
-                  setEmergencyKontak(vcfData.vcf_keluar?.emergency_respon_kontak || "");
-                  setKeterangan(vcfData.vcf_keluar?.keterangan || "");
-                  setIsEditing(false);
+                  setJamKeluar(formatTime());
+                  setEmergencyKontak("");
                   setError("");
                 }}
                 disabled={loading}
               >
-                BATAL
+                Reset
               </button>
-              <button
-                type="button"
-                className="flex-1 py-4 rounded-2xl font-bold bg-emerald-600 text-white shadow-xl shadow-emerald-600/20 hover:bg-emerald-500 transition-all flex items-center justify-center gap-3"
-                onClick={handleUpdateBagian4}
-                disabled={loading}
-              >
-                {loading ? "MEMPROSES..." : "SIMPAN PERUBAHAN"}
-              </button>
-            </>
-          )}
+            )}
 
-          {!isAlreadyFilled && (
-            <button
-              type="button"
-              className="px-8 py-4 rounded-2xl font-bold text-sm bg-slate-200 dark:bg-white/10 text-slate-600 dark:text-slate-300 border-2 border-transparent hover:bg-slate-300 dark:hover:bg-white/20 transition-all duration-300"
-              onClick={() => {
-                setJamKeluar(formatTime());
-                setEmergencyKontak("");
-                setError("");
-              }}
-              disabled={loading}
-            >
-              RESET
-            </button>
-          )}
-
-          {/* Konfirmasi keluar hanya saat sudah terisi dan tidak sedang edit */}
-          {isAlreadyFilled && !isEditing && (
             <button
               type="submit"
-              className="flex-1 py-4 rounded-2xl font-bold bg-emerald-600 text-white shadow-xl shadow-emerald-600/20 hover:bg-emerald-500 transition-all flex items-center justify-center gap-3"
+              className="flex-1 py-3.5 rounded-xl font-bold bg-slate-900 text-white shadow-sm hover:bg-slate-800 transition-all text-sm"
               disabled={loading}
             >
-              {loading ? "MEMPROSES..." : "KONFIRMASI KELUAR SEKARANG"}
+              {loading ? "Memproses..." : (isAlreadyFilled ? "Konfirmasi Keluar Sekarang" : "Simpan & Selesaikan")}
             </button>
-          )}
-
-          {/* Simpan & finalisasi untuk status bagian3_selesai */}
-          {!isAlreadyFilled && (
-            <button
-              type="submit"
-              className="flex-1 py-4 rounded-2xl font-bold bg-emerald-600 text-white shadow-xl shadow-emerald-600/20 hover:bg-emerald-500 transition-all flex items-center justify-center gap-3"
-              disabled={loading}
-            >
-              {loading ? "MEMPROSES..." : "SIMPAN & SELESAIKAN"}
-            </button>
-          )}
+          </div>
+        )}
         </div>
+
       </form>
 
       {/* Confirmation Modal */}
@@ -474,13 +449,13 @@ export default function Bagian4Form({ vcfId, canEdit, canFill, vcfData, onSucces
                 </button>
               </div>
 
-              <div className="mb-8">
-                <div className="w-16 h-16 rounded-3xl bg-emerald-500/10 text-emerald-500 flex items-center justify-center mb-6">
-                  <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" /><polyline points="22 4 12 14.01 9 11.01" /></svg>
+              <div className="mb-8 text-center sm:text-left">
+                <div className="w-20 h-20 rounded-[28px] bg-emerald-500/10 text-emerald-500 flex items-center justify-center mb-6 mx-auto sm:mx-0 shadow-inner">
+                  <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" /><polyline points="22 4 12 14.01 9 11.01" /></svg>
                 </div>
-                <h3 className="text-2xl font-black text-slate-900 dark:text-white tracking-tight mb-2">Finalisasi Keluar?</h3>
-                <p className="text-slate-500 dark:text-slate-400 leading-relaxed">
-                  Kendaraan <strong>{vcfData.no_polisi}</strong> ({vcfData.driver?.nama_supir}) akan dinyatakan keluar dari area pabrik.
+                <h3 className="text-3xl font-black text-slate-900 dark:text-white tracking-tight mb-3">Finalisasi Keluar?</h3>
+                <p className="text-slate-500 dark:text-slate-400 leading-relaxed text-sm sm:text-base">
+                  Kendaraan <span className="text-slate-900 dark:text-white font-bold">{vcfData.no_polisi}</span> ({vcfData.driver?.nama_supir}) akan dinyatakan keluar dari area pabrik secara permanen.
                 </p>
               </div>
 
@@ -527,16 +502,47 @@ export default function Bagian4Form({ vcfId, canEdit, canFill, vcfData, onSucces
     return (
       <>
         {readOnlyView}
-        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 backdrop-blur-sm" style={{ background: "rgba(0,0,0,0.6)" }} onClick={() => { setIsEditing(false); setError(""); }}>
-          <div className="glass-card w-full max-w-4xl max-h-[90vh] overflow-y-auto p-2 sm:p-6" onClick={(e) => e.stopPropagation()}>
-            <div className="sticky top-0 bg-bg-card z-10 flex justify-between items-center mb-6 pb-4 border-b border-border">
-               <div>
-                 <h2 className="text-xl font-bold">Edit Main Gate (Keluar)</h2>
-                 <p className="text-xs text-text-muted mt-1">Perbarui hasil pencatatan akhir kendaraan.</p>
-               </div>
-               <button onClick={() => { setIsEditing(false); setError(""); }} className="p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-white/5 transition-colors">✕</button>
+        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm" onClick={() => { setIsEditing(false); setError(""); }}>
+          <div className="bg-white dark:bg-bg-card w-full max-w-5xl max-h-[95vh] overflow-hidden flex flex-col rounded-[32px] shadow-2xl border border-slate-200 dark:border-white/10" onClick={(e) => e.stopPropagation()}>
+            {/* Sync Header with Bagian 3 */}
+            <div className="px-8 py-6 border-b border-slate-100 dark:border-white/5 flex justify-between items-center bg-white dark:bg-bg-card">
+              <div className="flex items-center gap-4">
+                <div className="w-12 h-12 rounded-2xl bg-emerald-50 dark:bg-emerald-500/5 flex items-center justify-center border border-emerald-100 dark:border-emerald-500/10">
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-emerald-500"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                </div>
+                <div>
+                  <h2 className="text-xl font-bold text-slate-800 dark:text-white tracking-tight">Edit Main Gate (Keluar)</h2>
+                  <p className="text-slate-400 text-xs font-medium">Perbarui data pencatatan akhir kendaraan</p>
+                </div>
+              </div>
+              <button onClick={() => { setIsEditing(false); setError(""); }} className="p-2 rounded-xl hover:bg-slate-100 dark:hover:bg-white/5 text-slate-400 transition-all">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M18 6 6 18M6 6l12 12"/></svg>
+              </button>
             </div>
-            {formView}
+            
+            <div className="p-8 overflow-y-auto flex-1 bg-white dark:bg-bg-card relative">
+               <div className="max-w-4xl mx-auto">
+                 {formView}
+               </div>
+            </div>
+
+            <div className="p-6 border-t border-slate-100 dark:border-white/5 bg-white dark:bg-bg-card flex justify-end gap-3 shrink-0">
+               <button 
+                 type="button"
+                 onClick={() => { setIsEditing(false); setError(""); }} 
+                 className="px-6 py-2.5 rounded-xl font-bold text-slate-500 hover:bg-slate-50 transition-colors text-sm"
+               >
+                 Batal
+               </button>
+               <button
+                 type="button"
+                 onClick={handleUpdateBagian4}
+                 disabled={loading}
+                 className="px-8 py-2.5 rounded-xl font-bold bg-slate-900 text-white hover:bg-slate-800 transition-all text-sm shadow-sm"
+               >
+                 {loading ? "Menyimpan..." : "Simpan Perubahan"}
+               </button>
+            </div>
           </div>
         </div>
       </>

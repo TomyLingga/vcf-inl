@@ -61,14 +61,14 @@ const getActionButtonStyle = (status: string) => {
   switch (status) {
     case "bagian1_selesai": return "border-amber-500 text-amber-500 hover:bg-amber-500 hover:text-white shadow-sm hover:shadow-amber-500/20";
     case "bagian2_selesai": return "border-indigo-500 text-indigo-500 hover:bg-indigo-500 hover:text-white shadow-sm hover:shadow-indigo-500/20";
-    case "loading_unloading_proses": 
+    case "loading_unloading_proses":
     case "loading_unloading_selesai": return "border-violet-500 text-violet-500 hover:bg-violet-500 hover:text-white shadow-sm hover:shadow-violet-500/20";
     case "bagian3_selesai": return "border-emerald-500 text-emerald-500 hover:bg-emerald-500 hover:text-white shadow-sm hover:shadow-emerald-500/20";
     case "selesai":
     case "reject":
-        return "border-slate-300 text-slate-500 hover:bg-slate-500 hover:text-white dark:border-white/20 dark:text-slate-400 dark:hover:bg-white/20 dark:hover:text-white";
+      return "border-slate-300 text-slate-500 hover:bg-slate-500 hover:text-white dark:border-white/20 dark:text-slate-400 dark:hover:bg-white/20 dark:hover:text-white";
     default:
-        return "border-blue-500 text-blue-500 hover:bg-blue-500 hover:text-white shadow-sm hover:shadow-blue-500/20";
+      return "border-blue-500 text-blue-500 hover:bg-blue-500 hover:text-white shadow-sm hover:shadow-blue-500/20";
   }
 };
 
@@ -132,7 +132,7 @@ export default function VcfQuickAccessPage() {
       const items = res.data.data || res.data;
       setVcfs(items.filter((v: VcfSummary) => v.status !== "selesai" && v.status !== "reject"));
     } catch {
-      
+
     } finally {
       setLoading(false);
     }
@@ -164,8 +164,8 @@ export default function VcfQuickAccessPage() {
         <button
           onClick={() => setShowGuide(!showGuide)}
           className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all border ${showGuide
-              ? "bg-blue-500/10 text-blue-500 border-blue-500/30"
-              : "bg-bg-secondary text-text-muted border-border hover:border-blue-500/30"
+            ? "bg-blue-500/10 text-blue-500 border-blue-500/30"
+            : "bg-bg-secondary text-text-muted border-border hover:border-blue-500/30"
             }`}
         >
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
